@@ -46,9 +46,12 @@ function useImage(path: string): [Side, (s: [number, number] | null) => void] {
 export function CompareDialog({
   item,
   onClose,
+  originalFit = "cover",
 }: {
   item: QueueItem;
   onClose: () => void;
+  /** How the original fills the result's frame: "cover" matches proportional resizes and Fill crops, "fill" matches Exact. */
+  originalFit?: "cover" | "fill";
 }) {
   const { t } = useTranslation();
   const output = item.output!;
@@ -57,7 +60,19 @@ export function CompareDialog({
   const [split, setSplit] = useState(50);
   const [zoom, setZoom] = useState<"fit" | "actual">("fit");
   const stage = useRef<HTMLDivElement>(null);
+  const viewport = useRef<HTMLDivElement>(null);
+  const [room, setRoom] = useState<[number, number]>([0, 0]);
   const dragging = useRef(false);
+
+  useEffect(() => {
+    const el = viewport.current;
+    if (!el) return;
+    const ro = new ResizeObserver(([e]) => {
+      if (e) setRoom([e.contentRect.width, e.contentRect.height]);
+    });
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => e.key === "Escape" && onClose();
@@ -73,7 +88,12 @@ export function CompareDialog({
     );
   };
 
-  const natural = before.size ?? after.size;
+  // Both layers share the result's frame, so 100 % shows the result's real pixels.
+  const frame = after.size ?? before.size;
+  const scale =
+    frame && zoom === "fit"
+      ? Math.min(1, room[0] / frame[0], room[1] / frame[1])
+      : 1;
   const delta =
     item.outputSize !== null && item.size > 0
       ? (item.outputSize / item.size - 1) * 100
@@ -83,6 +103,7 @@ export function CompareDialog({
     side: Side,
     onSize: (s: [number, number] | null) => void,
     alt: string,
+    fit: string,
     clip?: string,
   ) =>
     side.url && (
@@ -94,10 +115,7 @@ export function CompareDialog({
           onSize([e.currentTarget.naturalWidth, e.currentTarget.naturalHeight])
         }
         onError={() => onSize(null)}
-        className={cn(
-          "absolute inset-0 h-full w-full select-none",
-          zoom === "fit" ? "object-contain" : "object-fill",
-        )}
+        className={cn("absolute inset-0 h-full w-full select-none", fit)}
         style={clip ? { clipPath: clip } : undefined}
       />
     );
@@ -152,13 +170,16 @@ export function CompareDialog({
             <X className="size-4" />
           </button>
         </div>
-        <div className="relative min-h-0 flex-1 overflow-auto bg-bg">
+        <div
+          ref={viewport}
+          className="relative flex min-h-0 flex-1 overflow-auto bg-bg"
+        >
           <div
             ref={stage}
-            className="relative cursor-ew-resize touch-none"
+            className="relative m-auto shrink-0 cursor-ew-resize touch-none"
             style={
-              zoom === "actual" && natural
-                ? { width: natural[0], height: natural[1] }
+              frame
+                ? { width: frame[0] * scale, height: frame[1] * scale }
                 : { width: "100%", height: "100%" }
             }
             onPointerDown={(e) => {
@@ -169,11 +190,17 @@ export function CompareDialog({
             onPointerMove={(e) => dragging.current && move(e)}
             onPointerUp={() => (dragging.current = false)}
           >
-            {img(before, setBeforeSize, t("compare.original"))}
+            {img(
+              before,
+              setBeforeSize,
+              t("compare.original"),
+              originalFit === "fill" ? "object-fill" : "object-cover",
+            )}
             {img(
               after,
               setAfterSize,
               t("compare.result"),
+              "object-fill",
               `inset(0 0 0 ${split}%)`,
             )}
             <div

@@ -230,7 +230,11 @@ export function Workspace({ module }: { module: ModuleId }) {
           )}
         </p>
       )}
-      {compared && <CompareDialog item={compared} onClose={() => setCompare(null)} />}
+      {compared && <CompareDialog
+          item={compared}
+          onClose={() => setCompare(null)}
+          originalFit={module === "resizer" && o.resize.mode === "exact" ? "fill" : "cover"}
+        />}
     </div>
   );
 }
