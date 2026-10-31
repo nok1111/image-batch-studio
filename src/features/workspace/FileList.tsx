@@ -58,14 +58,19 @@ export function FileList({ items, running, onRemove, previews }: { items: QueueI
               <span className={cn("w-14 shrink-0 text-right text-xs tabular-nums", delta !== null && delta <= 0 ? "text-success" : "text-warning")}>
                 {delta !== null && item.status === "done" ? `${delta > 0 ? "+" : "−"}${Math.abs(delta).toFixed(0)}%` : ""}
               </span>
-              {previews !== undefined && (
-                <span
-                  className={cn("w-56 shrink-0 truncate text-xs", plan?.renumbered || plan?.action === "skip" || plan?.action === "replace" ? "text-warning" : plan?.error ? "text-danger" : "text-text")}
-                  title={plan?.target ?? (plan?.error ? `${t(`workspace.errors.${plan.error.code}`)}\n${plan.error.message}` : undefined)}
-                >
-                  {plan?.target ? `→ ${basename(plan.target)}${plan.action === "skip" ? ` (${t("workspace.status.skipped")})` : ""}` : plan?.error ? t(`workspace.errors.${plan.error.code}`) : ""}
-                </span>
-              )}
+              {previews !== undefined &&
+                (item.output ? (
+                  <span className="w-56 shrink-0 truncate text-xs text-text" title={item.output}>
+                    → {basename(item.output)}
+                  </span>
+                ) : (
+                  <span
+                    className={cn("w-56 shrink-0 truncate text-xs", plan?.renumbered || plan?.action === "skip" || plan?.action === "replace" ? "text-warning" : plan?.error ? "text-danger" : "text-text")}
+                    title={plan?.target ?? (plan?.error ? `${t(`workspace.errors.${plan.error.code}`)}\n${plan.error.message}` : undefined)}
+                  >
+                    {plan?.target ? `→ ${basename(plan.target)}${plan.action === "skip" ? ` (${t("workspace.status.skipped")})` : ""}` : plan?.error ? t(`workspace.errors.${plan.error.code}`) : ""}
+                  </span>
+                ))}
               <span className="flex w-28 shrink-0 justify-end" title={item.output ?? undefined}>
                 <Badge variant={STATUS_VARIANT[item.status]}>{statusLabel}</Badge>
               </span>
