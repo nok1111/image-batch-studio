@@ -1,12 +1,22 @@
-//! Decoding with safety limits, encoding per output format, and verification.
+//! Decoding with safety limits, encoding per output format (with optional
+//! metadata), target-size search and verification.
 
 use crate::{FileError, FileErrorCode, ImageFormat};
 use image::codecs::{
-    bmp::BmpEncoder, gif::GifEncoder, ico::IcoEncoder, jpeg::JpegEncoder, png::PngEncoder,
-    tiff::TiffEncoder, webp::WebPEncoder,
+    avif::AvifEncoder,
+    bmp::BmpEncoder,
+    gif::GifEncoder,
+    ico::IcoEncoder,
+    jpeg::JpegEncoder,
+    png::{CompressionType, FilterType, PngEncoder},
+    tiff::TiffEncoder,
+    webp::WebPEncoder,
 };
-use image::{DynamicImage, ImageError, ImageReader, Limits, Rgb, RgbImage};
-use std::io::{Seek, Write};
+use image::metadata::Orientation;
+use image::{
+    DynamicImage, ImageDecoder, ImageEncoder, ImageError, ImageReader, Limits, Rgb, RgbImage,
+};
+use std::io::Cursor;
 use std::path::Path;
 
 /// Largest accepted width/height (guards against decompression bombs).
@@ -14,6 +24,8 @@ pub const MAX_DIMENSION: u32 = 30_000;
 /// Largest decoder allocation.
 pub const MAX_ALLOC: u64 = 1536 * 1024 * 1024;
 pub const ICO_MAX_DIMENSION: u32 = 256;
+/// rav1e speed (1 slowest … 10 fastest).
+const AVIF_SPEED: u8 = 6;
 
 fn limits() -> Limits {
     let mut l = Limits::default();
@@ -24,9 +36,13 @@ fn limits() -> Limits {
 }
 
 pub struct Decoded {
+    /// Pixels with the EXIF orientation already applied.
     pub image: DynamicImage,
     /// Multi-frame input of which only the first frame was decoded.
     pub animated: bool,
+    pub icc: Option<Vec<u8>>,
+    /// EXIF with its orientation tag reset (the pixels are already upright).
+    pub exif: Option<Vec<u8>>,
 }
 
 /// Decodes by content (not extension), with dimension and memory limits.
@@ -43,13 +59,26 @@ pub fn decode(path: &Path) -> Result<Decoded, FileError> {
     }
     let is_gif = reader.format() == Some(image::ImageFormat::Gif);
     reader.limits(limits());
-    let image = reader.decode().map_err(map_decode_error)?;
+    let mut decoder = reader.into_decoder().map_err(map_decode_error)?;
+    let icc = decoder.icc_profile().ok().flatten();
+    let mut exif = decoder.exif_metadata().ok().flatten();
+    let orientation = decoder.orientation().unwrap_or(Orientation::NoTransforms);
+    if let Some(e) = exif.as_mut() {
+        let _ = Orientation::remove_from_exif_chunk(e);
+    }
+    let mut image = DynamicImage::from_decoder(decoder).map_err(map_decode_error)?;
+    image.apply_orientation(orientation);
     let animated = is_gif && is_animated_gif(path);
-    Ok(Decoded { image, animated })
+    Ok(Decoded {
+        image,
+        animated,
+        icc,
+        exif,
+    })
 }
 
 fn is_animated_gif(path: &Path) -> bool {
-    use image::{AnimationDecoder, ImageDecoder};
+    use image::AnimationDecoder;
     let Ok(file) = std::fs::File::open(path) else {
         return false;
     };
@@ -121,20 +150,83 @@ fn flatten_on_white(img: &DynamicImage) -> RgbImage {
     })
 }
 
-pub fn encode<W: Write + Seek>(
-    img: &DynamicImage,
-    format: ImageFormat,
-    quality: u8,
-    w: &mut W,
-) -> Result<(), FileError> {
-    check_encodable(format, img.width(), img.height())?;
-    let result = match format {
-        ImageFormat::Png => img.write_with_encoder(PngEncoder::new(w)),
-        ImageFormat::Jpeg => DynamicImage::ImageRgb8(flatten_on_white(img))
-            .write_with_encoder(JpegEncoder::new_with_quality(w, quality.clamp(1, 100))),
-        ImageFormat::Webp => to_8bit(img).write_with_encoder(WebPEncoder::new_lossless(w)),
+#[derive(Debug, Clone, Copy)]
+pub struct EncodeOptions<'a> {
+    pub format: ImageFormat,
+    pub quality: u8,
+    /// WebP only.
+    pub lossless: bool,
+    pub icc: Option<&'a [u8]>,
+    pub exif: Option<&'a [u8]>,
+}
+
+pub struct Encoded {
+    pub bytes: Vec<u8>,
+    /// Some requested metadata could not be stored in this format.
+    pub metadata_dropped: bool,
+}
+
+/// (ICC, EXIF) support per output format.
+fn metadata_support(format: ImageFormat, lossless: bool) -> (bool, bool) {
+    match format {
+        ImageFormat::Png | ImageFormat::Jpeg => (true, true),
+        ImageFormat::Webp => {
+            let _ = lossless;
+            (true, true)
+        }
+        ImageFormat::Avif => (false, true),
+        ImageFormat::Tiff => (true, false),
+        ImageFormat::Bmp | ImageFormat::Gif | ImageFormat::Ico => (false, false),
+    }
+}
+
+fn with_metadata<E: ImageEncoder>(mut e: E, icc: Option<&[u8]>, exif: Option<&[u8]>) -> E {
+    if let Some(icc) = icc {
+        let _ = e.set_icc_profile(icc.to_vec());
+    }
+    if let Some(exif) = exif {
+        let _ = e.set_exif_metadata(exif.to_vec());
+    }
+    e
+}
+
+pub fn encode(img: &DynamicImage, o: &EncodeOptions) -> Result<Encoded, FileError> {
+    check_encodable(o.format, img.width(), img.height())?;
+    let (icc_ok, exif_ok) = metadata_support(o.format, o.lossless);
+    let icc = o.icc.filter(|_| icc_ok);
+    let exif = o.exif.filter(|_| exif_ok);
+    let metadata_dropped = (o.icc.is_some() && !icc_ok) || (o.exif.is_some() && !exif_ok);
+    let q = o.quality.clamp(1, 100);
+    let mut buf = Cursor::new(Vec::new());
+    let w = &mut buf;
+    let result = match o.format {
+        ImageFormat::Png => img.write_with_encoder(with_metadata(
+            PngEncoder::new_with_quality(w, CompressionType::Best, FilterType::Adaptive),
+            icc,
+            exif,
+        )),
+        ImageFormat::Jpeg => DynamicImage::ImageRgb8(flatten_on_white(img)).write_with_encoder(
+            with_metadata(JpegEncoder::new_with_quality(w, q), icc, exif),
+        ),
+        ImageFormat::Webp if o.lossless => {
+            to_8bit(img).write_with_encoder(with_metadata(WebPEncoder::new_lossless(w), icc, exif))
+        }
+        ImageFormat::Webp => {
+            let bytes = encode_webp_lossy(img, q, icc, exif)?;
+            return Ok(Encoded {
+                bytes,
+                metadata_dropped,
+            });
+        }
+        ImageFormat::Avif => to_8bit(img).write_with_encoder(with_metadata(
+            AvifEncoder::new_with_speed_quality(w, AVIF_SPEED, q).with_num_threads(Some(1)),
+            None,
+            exif,
+        )),
         ImageFormat::Bmp => to_8bit(img).write_with_encoder(BmpEncoder::new(w)),
-        ImageFormat::Tiff => to_8bit(img).write_with_encoder(TiffEncoder::new(w)),
+        ImageFormat::Tiff => {
+            to_8bit(img).write_with_encoder(with_metadata(TiffEncoder::new(w), icc, None))
+        }
         ImageFormat::Gif => {
             let frame = image::Frame::new(img.to_rgba8());
             GifEncoder::new(w).encode_frame(frame)
@@ -142,14 +234,156 @@ pub fn encode<W: Write + Seek>(
         ImageFormat::Ico => {
             DynamicImage::ImageRgba8(img.to_rgba8()).write_with_encoder(IcoEncoder::new(w))
         }
-        ImageFormat::Avif => unreachable!("rejected by check_encodable"),
     };
-    result.map_err(encode_error)
+    result.map_err(encode_error)?;
+    Ok(Encoded {
+        bytes: buf.into_inner(),
+        metadata_dropped,
+    })
+}
+
+fn encode_webp_lossy(
+    img: &DynamicImage,
+    quality: u8,
+    icc: Option<&[u8]>,
+    exif: Option<&[u8]>,
+) -> Result<Vec<u8>, FileError> {
+    let img = to_8bit(img);
+    let (w, h) = (img.width(), img.height());
+    let encoder = match &img {
+        DynamicImage::ImageRgba8(p) => webp::Encoder::from_rgba(p.as_raw(), w, h),
+        DynamicImage::ImageRgb8(p) => webp::Encoder::from_rgb(p.as_raw(), w, h),
+        _ => unreachable!("to_8bit returns RGB8 or RGBA8"),
+    };
+    let encoded = encoder
+        .encode_advanced(&{
+            let mut c = webp::WebPConfig::new()
+                .map_err(|_| FileError::new(FileErrorCode::Encode, "WebP config failed"))?;
+            c.quality = f32::from(quality);
+            c.method = 4;
+            c
+        })
+        .map_err(|e| FileError::new(FileErrorCode::Encode, format!("WebP: {e:?}")))?;
+    if icc.is_none() && exif.is_none() {
+        return Ok(encoded.to_vec());
+    }
+    webp_mux(&encoded, w, h, icc, exif)
+        .ok_or_else(|| FileError::new(FileErrorCode::Encode, "malformed WebP from encoder"))
+}
+
+/// Rewraps a simple WebP as extended (VP8X) with ICCP/EXIF chunks.
+fn webp_mux(
+    data: &[u8],
+    width: u32,
+    height: u32,
+    icc: Option<&[u8]>,
+    exif: Option<&[u8]>,
+) -> Option<Vec<u8>> {
+    if data.len() < 12 || &data[0..4] != b"RIFF" || &data[8..12] != b"WEBP" {
+        return None;
+    }
+    let mut image_chunks = Vec::new();
+    let mut alpha = false;
+    let mut pos = 12;
+    while pos + 8 <= data.len() {
+        let fourcc = &data[pos..pos + 4];
+        let len = u32::from_le_bytes(data[pos + 4..pos + 8].try_into().ok()?) as usize;
+        let end = pos.checked_add(8 + len + (len & 1))?.min(data.len());
+        match fourcc {
+            b"VP8X" => alpha |= data.get(pos + 8).is_some_and(|f| f & 0x10 != 0),
+            b"ALPH" => {
+                alpha = true;
+                image_chunks.extend_from_slice(&data[pos..end]);
+            }
+            _ => image_chunks.extend_from_slice(&data[pos..end]),
+        }
+        pos = end;
+    }
+    let chunk = |out: &mut Vec<u8>, fourcc: &[u8], body: &[u8]| {
+        out.extend_from_slice(fourcc);
+        out.extend_from_slice(&(body.len() as u32).to_le_bytes());
+        out.extend_from_slice(body);
+        if body.len() % 2 == 1 {
+            out.push(0);
+        }
+    };
+    let mut flags = 0u8;
+    if icc.is_some() {
+        flags |= 0x20;
+    }
+    if alpha {
+        flags |= 0x10;
+    }
+    if exif.is_some() {
+        flags |= 0x08;
+    }
+    let mut vp8x = vec![flags, 0, 0, 0];
+    vp8x.extend_from_slice(&(width - 1).to_le_bytes()[..3]);
+    vp8x.extend_from_slice(&(height - 1).to_le_bytes()[..3]);
+    let mut body = b"WEBP".to_vec();
+    chunk(&mut body, b"VP8X", &vp8x);
+    if let Some(icc) = icc {
+        chunk(&mut body, b"ICCP", icc);
+    }
+    body.extend_from_slice(&image_chunks);
+    if let Some(exif) = exif {
+        chunk(&mut body, b"EXIF", exif);
+    }
+    let mut out = b"RIFF".to_vec();
+    out.extend_from_slice(&(body.len() as u32).to_le_bytes());
+    out.extend_from_slice(&body);
+    Some(out)
+}
+
+pub struct Sized {
+    pub encoded: Encoded,
+    /// Even quality 1 is larger than the target.
+    pub target_missed: bool,
+}
+
+/// Highest quality in `1..=o.quality` whose output is at most `target` bytes.
+pub fn encode_to_size(
+    img: &DynamicImage,
+    o: &EncodeOptions,
+    target: u64,
+) -> Result<Sized, FileError> {
+    let first = encode(img, o)?;
+    if first.bytes.len() as u64 <= target {
+        return Ok(Sized {
+            encoded: first,
+            target_missed: false,
+        });
+    }
+    let (mut lo, mut hi) = (1u8, o.quality.saturating_sub(1).max(1));
+    let mut best: Option<Encoded> = None;
+    while lo <= hi {
+        let mid = lo + (hi - lo) / 2;
+        let e = encode(img, &EncodeOptions { quality: mid, ..*o })?;
+        if e.bytes.len() as u64 <= target {
+            best = Some(e);
+            lo = mid + 1;
+        } else if mid == 1 {
+            break;
+        } else {
+            hi = mid - 1;
+        }
+    }
+    match best {
+        Some(encoded) => Ok(Sized {
+            encoded,
+            target_missed: false,
+        }),
+        None => Ok(Sized {
+            encoded: encode(img, &EncodeOptions { quality: 1, ..*o })?,
+            target_missed: true,
+        }),
+    }
 }
 
 /// A written file counts as successful only if it is non-empty and decodes
-/// back to the expected dimensions.
-pub fn verify(path: &Path, width: u32, height: u32) -> Result<(), FileError> {
+/// back to the expected dimensions. AVIF (no decoder in this build) is checked
+/// through its container header instead.
+pub fn verify(path: &Path, format: ImageFormat, width: u32, height: u32) -> Result<(), FileError> {
     let len = std::fs::metadata(path).map_err(FileError::io)?.len();
     if len == 0 {
         return Err(FileError::new(
@@ -157,25 +391,44 @@ pub fn verify(path: &Path, width: u32, height: u32) -> Result<(), FileError> {
             "output file is empty",
         ));
     }
-    let img = decode(path)
-        .map_err(|e| {
-            FileError::new(
-                FileErrorCode::Verify,
-                format!("output does not decode: {e}"),
-            )
+    let dims = if format == ImageFormat::Avif {
+        let data = std::fs::read(path).map_err(FileError::io)?;
+        avif_dimensions(&data).ok_or_else(|| {
+            FileError::new(FileErrorCode::Verify, "output is not a valid AVIF file")
         })?
-        .image;
-    if (img.width(), img.height()) != (width, height) {
+    } else {
+        let img = decode(path)
+            .map_err(|e| {
+                FileError::new(
+                    FileErrorCode::Verify,
+                    format!("output does not decode: {e}"),
+                )
+            })?
+            .image;
+        (img.width(), img.height())
+    };
+    if dims != (width, height) {
         return Err(FileError::new(
             FileErrorCode::Verify,
-            format!(
-                "output is {}×{}, expected {width}×{height}",
-                img.width(),
-                img.height()
-            ),
+            format!("output is {}×{}, expected {width}×{height}", dims.0, dims.1),
         ));
     }
     Ok(())
+}
+
+/// Reads width/height from the `ispe` property of an AVIF (`ftyp` = avif).
+pub fn avif_dimensions(data: &[u8]) -> Option<(u32, u32)> {
+    if data.len() < 12 || &data[4..8] != b"ftyp" || &data[8..12] != b"avif" {
+        return None;
+    }
+    let at = data.windows(4).position(|w| w == b"ispe")?;
+    let field = |o: usize| -> Option<u32> {
+        Some(u32::from_be_bytes(
+            data.get(at + o..at + o + 4)?.try_into().ok()?,
+        ))
+    };
+    // fourcc, version/flags, width, height
+    Some((field(8)?, field(12)?))
 }
 
 #[cfg(test)]
@@ -194,15 +447,48 @@ mod tests {
     }
 
     #[test]
-    fn ico_and_avif_limits() {
+    fn ico_limit() {
         assert!(check_encodable(ImageFormat::Ico, 256, 256).is_ok());
         assert_eq!(
             check_encodable(ImageFormat::Ico, 257, 10).unwrap_err().code,
             FileErrorCode::OutputUnsupported
         );
-        assert_eq!(
-            check_encodable(ImageFormat::Avif, 1, 1).unwrap_err().code,
-            FileErrorCode::OutputUnsupported
-        );
+    }
+
+    #[test]
+    fn lossy_webp_mux_keeps_metadata_and_decodes() {
+        let img = DynamicImage::ImageRgba8(RgbaImage::from_fn(33, 17, |x, y| {
+            Rgba([x as u8 * 7, y as u8 * 9, 100, if x < 5 { 0 } else { 255 }])
+        }));
+        let exif = b"Exif\0\0MM\0\x2a\0\0\0\x08\0\0".to_vec();
+        let o = EncodeOptions {
+            format: ImageFormat::Webp,
+            quality: 80,
+            lossless: false,
+            icc: None,
+            exif: Some(&exif),
+        };
+        let out = encode(&img, &o).unwrap().bytes;
+        assert_eq!(&out[12..16], b"VP8X");
+        let mut dec = image::codecs::webp::WebPDecoder::new(Cursor::new(&out)).unwrap();
+        assert!(dec.exif_metadata().unwrap().is_some());
+        let back = DynamicImage::from_decoder(dec).unwrap();
+        assert_eq!((back.width(), back.height()), (33, 17));
+        assert!(back.color().has_alpha());
+    }
+
+    #[test]
+    fn avif_header_dimensions() {
+        let img = DynamicImage::new_rgb8(40, 24);
+        let o = EncodeOptions {
+            format: ImageFormat::Avif,
+            quality: 60,
+            lossless: false,
+            icc: None,
+            exif: None,
+        };
+        let out = encode(&img, &o).unwrap().bytes;
+        assert_eq!(avif_dimensions(&out), Some((40, 24)));
+        assert_eq!(avif_dimensions(b"not an avif file at all"), None);
     }
 }

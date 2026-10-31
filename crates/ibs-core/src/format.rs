@@ -48,7 +48,16 @@ impl ImageFormat {
 
     /// Whether this build can encode the format.
     pub fn can_encode(self) -> bool {
-        !matches!(self, Self::Avif)
+        true
+    }
+
+    /// Lossy formats honour `quality` and the target size.
+    pub fn is_lossy(self, lossless: bool) -> bool {
+        match self {
+            Self::Jpeg | Self::Avif => true,
+            Self::Webp => !lossless,
+            _ => false,
+        }
     }
 }
 

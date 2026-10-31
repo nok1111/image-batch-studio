@@ -3,4 +3,4 @@
 /**
  * Non-fatal notice attached to a successful result.
  */
-export type FileWarning = "firstFrameOnly";
+export type FileWarning = "firstFrameOnly" | "metadataDropped" | "targetNotReached" | "targetSizeUnsupported" | "largerThanSource";

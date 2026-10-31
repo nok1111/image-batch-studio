@@ -7,4 +7,4 @@ export type FileResult = {
 /**
  * Index into `Job::inputs`.
  */
-index: number, status: FileStatus, output: string | null, outputSize: number | null, error: FileError | null, warning: FileWarning | null, };
+index: number, status: FileStatus, output: string | null, outputSize: number | null, error: FileError | null, warnings: Array<FileWarning>, };
