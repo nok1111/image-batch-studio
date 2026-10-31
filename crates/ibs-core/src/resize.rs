@@ -67,7 +67,15 @@ impl ResizeSpec {
     pub fn geometry(&self, w: u32, h: u32) -> Geometry {
         let (bw, bh) = (f64::from(self.width), f64::from(self.height));
         let (sw, sh) = (f64::from(w), f64::from(h));
-        let limit = |f: f64| if self.allow_upscale { f } else { f.min(1.0) };
+        let max = f64::from(MAX_DIMENSION);
+        let limit = |f: f64| {
+            let f = f.min(max / sw).min(max / sh);
+            if self.allow_upscale {
+                f
+            } else {
+                f.min(1.0)
+            }
+        };
         let uniform = |f: f64| {
             let f = limit(f);
             let s = (scale(w, f), scale(h, f));
@@ -131,6 +139,21 @@ mod tests {
             percent: 50,
             allow_upscale: up,
         }
+    }
+
+    #[test]
+    fn dimension_cap_keeps_aspect_ratio() {
+        use ResizeMode::*;
+        assert_eq!(
+            spec(Height, 0, 30_000, true).geometry(1000, 100).output,
+            (30_000, 3_000)
+        );
+        assert_eq!(
+            spec(Percent, 0, 0, true).geometry(40_000, 20_000).output,
+            (20_000, 10_000)
+        );
+        let fill = spec(Fill, 30_000, 30_000, true).geometry(100, 10);
+        assert_eq!(fill.scaled, (30_000, 3_000));
     }
 
     #[test]
