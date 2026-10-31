@@ -79,7 +79,7 @@ fn validate(job: &Job) -> Result<(), JobError> {
             OutputMode::Convert(f) => {
                 matches!(f, ImageFormat::Jpeg | ImageFormat::Webp) && f.is_lossy(o.lossless)
             }
-            OutputMode::SameAsSource => !o.lossless,
+            OutputMode::SameAsSource => true,
             OutputMode::CopyOriginal => false,
         };
         if t == 0 || !lossy_ok {

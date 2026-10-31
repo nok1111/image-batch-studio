@@ -52,7 +52,7 @@ export function usesQuality(format: FormatChoice, lossless: boolean): boolean {
 }
 
 export function supportsTargetSize(format: FormatChoice, lossless: boolean): boolean {
-  return format === "jpeg" || ((format === "webp" || format === "source") && !lossless);
+  return format === "jpeg" || format === "source" || (format === "webp" && !lossless);
 }
 
 export function effectiveQuality(module: ModuleId, o: ModuleOptions): number {
