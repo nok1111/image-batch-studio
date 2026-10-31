@@ -1,0 +1,106 @@
+@import "tailwindcss";
+@import "@fontsource-variable/inter";
+
+@custom-variant dark (&:where(.dark, .dark *));
+
+/* Design tokens. Dark values come from the product visual identity. */
+:root,
+.dark {
+  --ibs-bg: #111318;
+  --ibs-bg-secondary: #191d25;
+  --ibs-card: #202631;
+  --ibs-card-hover: #262d3a;
+  --ibs-border: #2b3240;
+  --ibs-accent: #8b7cff;
+  --ibs-accent-hover: #9d90ff;
+  --ibs-accent-foreground: #ffffff;
+  --ibs-accent-2: #42d6b5;
+  --ibs-text: #f4f5f7;
+  --ibs-text-secondary: #9299a8;
+  --ibs-danger: #ff6b7a;
+  --ibs-warning: #ffc062;
+  --ibs-success: #42d6b5;
+  --ibs-shadow: 0 1px 2px rgb(0 0 0 / 0.3), 0 8px 24px rgb(0 0 0 / 0.25);
+  color-scheme: dark;
+}
+
+.light {
+  --ibs-bg: #f5f6f8;
+  --ibs-bg-secondary: #eceef2;
+  --ibs-card: #ffffff;
+  --ibs-card-hover: #f7f7fb;
+  --ibs-border: #dde0e7;
+  --ibs-accent: #6f5ff0;
+  --ibs-accent-hover: #5e4ee0;
+  --ibs-accent-foreground: #ffffff;
+  --ibs-accent-2: #1fae8e;
+  --ibs-text: #151821;
+  --ibs-text-secondary: #5d6475;
+  --ibs-danger: #d93a4b;
+  --ibs-warning: #b9770e;
+  --ibs-success: #1fae8e;
+  --ibs-shadow: 0 1px 2px rgb(16 24 40 / 0.06), 0 8px 24px rgb(16 24 40 / 0.06);
+  color-scheme: light;
+}
+
+@theme inline {
+  --font-sans: "Inter Variable", ui-sans-serif, system-ui, "Segoe UI", sans-serif;
+  --color-bg: var(--ibs-bg);
+  --color-bg-secondary: var(--ibs-bg-secondary);
+  --color-card: var(--ibs-card);
+  --color-card-hover: var(--ibs-card-hover);
+  --color-border: var(--ibs-border);
+  --color-accent: var(--ibs-accent);
+  --color-accent-hover: var(--ibs-accent-hover);
+  --color-accent-foreground: var(--ibs-accent-foreground);
+  --color-accent-2: var(--ibs-accent-2);
+  --color-text: var(--ibs-text);
+  --color-text-secondary: var(--ibs-text-secondary);
+  --color-danger: var(--ibs-danger);
+  --color-warning: var(--ibs-warning);
+  --color-success: var(--ibs-success);
+  --shadow-card: var(--ibs-shadow);
+  --radius-card: 14px;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+}
+
+body {
+  margin: 0;
+  background: var(--ibs-bg);
+  color: var(--ibs-text);
+  font-family: var(--font-sans);
+  font-size: 14px;
+  -webkit-font-smoothing: antialiased;
+  user-select: none;
+}
+
+input,
+textarea {
+  user-select: text;
+}
+
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+::-webkit-scrollbar-thumb {
+  background: var(--ibs-border);
+  border-radius: 8px;
+  border: 2px solid transparent;
+  background-clip: padding-box;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * {
+    transition: none !important;
+    animation: none !important;
+  }
+}
