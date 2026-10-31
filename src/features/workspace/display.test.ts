@@ -8,5 +8,6 @@ describe("displayMime", () => {
     expect(displayMime("/x/y.avif")).toBe("image/avif");
     expect(displayMime("/x/y.tiff")).toBe("image/png");
     expect(displayMime("/x/y.ico")).toBe("image/png");
+    expect(displayMime("/x/y.gif")).toBe("image/png");
   });
 });

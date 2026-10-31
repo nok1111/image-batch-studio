@@ -1,7 +1,7 @@
-/** MIME type of the bytes `load_image` returns for `path` (TIFF/ICO arrive as PNG). */
+/** MIME type of the bytes `load_image` returns for `path` (TIFF/ICO/GIF arrive as PNG). */
 export function displayMime(path: string): string {
   const ext = path.split(".").pop()?.toLowerCase() ?? "";
   if (["jpg", "jpeg", "jpe", "jfif"].includes(ext)) return "image/jpeg";
-  if (["webp", "gif", "bmp", "avif"].includes(ext)) return `image/${ext}`;
+  if (["webp", "bmp", "avif"].includes(ext)) return `image/${ext}`;
   return "image/png";
 }

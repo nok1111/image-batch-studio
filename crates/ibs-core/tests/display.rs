@@ -16,6 +16,14 @@ fn native_formats_are_returned_untouched_and_tiff_becomes_png() {
     let back = image::load_from_memory_with_format(&shown, ImageFormat::Png).unwrap();
     assert_eq!(back.to_rgba8(), img);
 
+    let gif = dir.path().join("a.gif");
+    RgbaImage::from_pixel(7, 5, Rgba([10, 20, 30, 255]))
+        .save_with_format(&gif, ImageFormat::Gif)
+        .unwrap();
+    let shown = display_bytes(&gif).unwrap();
+    let back = image::load_from_memory_with_format(&shown, ImageFormat::Png).unwrap();
+    assert_eq!((back.width(), back.height()), (7, 5));
+
     let txt = dir.path().join("a.txt");
     std::fs::write(&txt, b"hello").unwrap();
     assert!(display_bytes(&txt).is_err());

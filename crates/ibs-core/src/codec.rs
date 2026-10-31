@@ -436,7 +436,8 @@ pub const MAX_DISPLAY_BYTES: u64 = 256 * 1024 * 1024;
 
 /// Bytes a webview can show for `path`. Formats browsers render natively are
 /// returned untouched (so the viewer sees the exact encoded result); TIFF and
-/// ICO are decoded and re-encoded losslessly as PNG.
+/// ICO are decoded and re-encoded losslessly as PNG, and so is GIF, so an
+/// animation shows the same first frame the engine processes.
 pub fn display_bytes(path: &Path) -> Result<Vec<u8>, FileError> {
     let ext = path
         .extension()
@@ -445,9 +446,9 @@ pub fn display_bytes(path: &Path) -> Result<Vec<u8>, FileError> {
         .unwrap_or_default();
     let native = matches!(
         ext.as_str(),
-        "png" | "jpg" | "jpeg" | "jpe" | "jfif" | "webp" | "gif" | "bmp" | "avif"
+        "png" | "jpg" | "jpeg" | "jpe" | "jfif" | "webp" | "bmp" | "avif"
     );
-    let reencode = matches!(ext.as_str(), "tif" | "tiff" | "ico");
+    let reencode = matches!(ext.as_str(), "tif" | "tiff" | "ico" | "gif");
     if !native && !reencode {
         return Err(FileError::new(
             FileErrorCode::Unsupported,
