@@ -114,12 +114,12 @@ export const useQueueStore = create<QueueState>((set, get) => ({
       ...idle,
       running: true,
       startedAt: Date.now(),
-      lastOutputDir: output.dir,
       error: null,
       items: items.map((i) => ({ ...i, status: "pending", output: null, outputSize: null, error: null, warning: null })),
     });
     try {
       await ipc.startJob({ inputs: items.map((i) => i.path), output }, (ev) => get().applyEvent(ev));
+      set({ lastOutputDir: output.dir });
     } catch (e) {
       set({ running: false, startedAt: null, error: errorMessage(e) });
     }

@@ -96,5 +96,6 @@ describe("queue store", () => {
     await useQueueStore.getState().start(output);
     expect(useQueueStore.getState().running).toBe(false);
     expect(useQueueStore.getState().error).toBe("a batch is already running");
+    expect(useQueueStore.getState().lastOutputDir).toBeNull();
   });
 });
