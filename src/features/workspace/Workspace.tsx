@@ -5,40 +5,61 @@ import { getCurrentWebview } from "@tauri-apps/api/webview";
 import { FilePlus2, FolderOpen, FolderPlus, Loader2, Play, Square, Trash2, Upload } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { Select } from "@/components/ui/select";
-import { Slider } from "@/components/ui/slider";
-import { formatDuration } from "@/lib/format";
-import type { ImageFormat } from "@/lib/ipc";
+import type { ModuleId } from "@/app/modules";
+import { formatBytes, formatDuration } from "@/lib/format";
+import { errorMessage, ipc, type PlannedOutput } from "@/lib/ipc";
 import { cn } from "@/lib/utils";
 import { useQueueStore } from "@/stores/queue";
 import { useSettingsStore } from "@/stores/settings";
 import { FileList } from "./FileList";
+import { buildJob, resolveOptions, savings } from "./job";
+import { CompressorPanel, ConverterPanel, RenamerPanel, ResizerPanel } from "./OptionPanels";
 
 const INPUT_EXTENSIONS = ["png", "jpg", "jpeg", "jpe", "jfif", "webp", "bmp", "tif", "tiff", "gif", "ico"];
 
-/** AVIF output is enabled together with the full Converter. */
-const OUTPUT_FORMATS: { value: ImageFormat; label: string }[] = [
-  { value: "jpeg", label: "JPG" },
-  { value: "png", label: "PNG" },
-  { value: "webp", label: "WebP (lossless)" },
-  { value: "bmp", label: "BMP" },
-  { value: "tiff", label: "TIFF" },
-  { value: "gif", label: "GIF" },
-  { value: "ico", label: "ICO (≤ 256 px)" },
-];
+const PANELS = {
+  converter: ConverterPanel,
+  compressor: CompressorPanel,
+  resizer: ResizerPanel,
+  renamer: RenamerPanel,
+} as const;
+
+export type WorkspaceModule = keyof typeof PANELS;
 
 /** Shared input queue + output options + run controls used by tool modules. */
-export function Workspace() {
+export function Workspace({ module }: { module: ModuleId }) {
   const { t } = useTranslation();
   const settings = useSettingsStore((s) => s.settings)!;
   const q = useQueueStore();
-  const format = q.options.format ?? (settings.defaultFormat === "avif" ? "jpeg" : settings.defaultFormat);
-  const quality = q.options.quality ?? settings.defaultQuality;
-  const outputDir = q.options.outputDir ?? settings.defaultOutputDir;
-  const setFormat = (v: ImageFormat) => q.setOptions({ format: v });
-  const setQuality = (v: number) => q.setOptions({ quality: v });
-  const setOutputDir = (v: string) => q.setOptions({ outputDir: v });
+  const o = resolveOptions(module, q.options[module], settings);
+  const outputDir = o.outputDir;
+  const set = (patch: Parameters<typeof q.setOptions>[1]) => q.setOptions(module, patch);
+  const setOutputDir = (v: string) => set({ outputDir: v });
   const [dragging, setDragging] = useState(false);
+  const Panel = PANELS[module as WorkspaceModule];
+  const [previews, setPreviews] = useState<PlannedOutput[] | null>(null);
+  const [previewError, setPreviewError] = useState<string | null>(null);
+
+  const previewKey =
+    module === "renamer" && outputDir && q.items.length > 0 && !q.running
+      ? JSON.stringify(buildJob(module, o, settings, outputDir, q.items.map((i) => i.path)))
+      : null;
+  useEffect(() => {
+    setPreviews(null);
+    setPreviewError(null);
+    if (!previewKey) return;
+    let stale = false;
+    const timer = setTimeout(() => {
+      ipc.previewJob(JSON.parse(previewKey)).then(
+        (p) => !stale && setPreviews(p),
+        (e: unknown) => !stale && setPreviewError(errorMessage(e)),
+      );
+    }, 250);
+    return () => {
+      stale = true;
+      clearTimeout(timer);
+    };
+  }, [previewKey]);
 
   useEffect(() => {
     let unlisten: (() => void) | undefined;
@@ -82,11 +103,13 @@ export function Workspace() {
   const start = async () => {
     const dir = outputDir ?? (await chooseOutput());
     if (!dir) return;
-    await q.start({ dir, format, quality, conflict: settings.conflictPolicy });
+    await q.start(buildJob(module, o, settings, dir, []));
   };
 
   const busy = q.running || q.scanning;
   const s = q.summary;
+  const saved = savings(q.items);
+  const collisions = previews?.filter((p) => p.renumbered || p.action === "skip" || p.action === "replace").length ?? 0;
 
   return (
     <div className="flex h-full min-h-0 flex-col gap-4 px-8 pb-6">
@@ -130,7 +153,7 @@ export function Workspace() {
             <p className="text-xs text-text-secondary">{t("workspace.dropHint")}</p>
           </div>
         ) : (
-          <FileList items={q.items} running={q.running} onRemove={q.removeItem} />
+          <FileList items={q.items} running={q.running} onRemove={q.removeItem} previews={module === "renamer" ? (previews ?? []) : undefined} />
         )}
         {dragging && (
           <div className="pointer-events-none absolute inset-0 flex items-center justify-center bg-accent/10 text-sm font-medium text-accent">
@@ -139,17 +162,11 @@ export function Workspace() {
         )}
       </Card>
 
+      <Card className="flex flex-wrap items-end gap-x-6 gap-y-4 px-5 py-4">
+        <Panel module={module} o={o} set={set} disabled={q.running} />
+      </Card>
+
       <Card className="flex flex-wrap items-end gap-6 px-5 py-4">
-        <label className="flex flex-col gap-1.5 text-xs text-text-secondary">
-          {t("workspace.format")}
-          <Select<ImageFormat> value={format} onValueChange={setFormat} options={OUTPUT_FORMATS} aria-label={t("workspace.format")} />
-        </label>
-        <div className={cn("flex w-48 flex-col gap-2.5 text-xs text-text-secondary", format !== "jpeg" && "opacity-40")}>
-          <span>
-            {t("workspace.quality")}: <span className="tabular-nums text-text">{quality}</span>
-          </span>
-          <Slider value={quality} min={1} max={100} step={1} onValueChange={setQuality} disabled={format !== "jpeg"} aria-label={t("workspace.quality")} />
-        </div>
         <div className="flex min-w-0 flex-1 flex-col gap-1.5 text-xs text-text-secondary">
           {t("workspace.outputFolder")}
           <button
@@ -175,6 +192,19 @@ export function Workspace() {
         )}
       </Card>
 
+      {module === "renamer" && q.items.length > 0 && !q.running && (
+        <p className={cn("text-xs", previewError || collisions > 0 ? "text-warning" : "text-text-secondary")} aria-live="polite">
+          {previewError
+            ? t("options.previewError", { message: previewError })
+            : !outputDir
+              ? t("options.previewNeedsFolder")
+              : previews
+                ? collisions > 0
+                  ? t("options.previewCollisions", { count: collisions })
+                  : t("options.previewOk")
+                : t("options.previewing")}
+        </p>
+      )}
       {(q.error || s) && (
         <p role="status" className={cn("text-sm", q.error ? "text-danger" : "text-text-secondary")}>
           {q.error
@@ -186,6 +216,15 @@ export function Workspace() {
                 cancelled: s!.cancelled,
                 time: formatDuration(s!.elapsedMs / 1000),
               })}
+          {!q.error && saved.percent !== null && module !== "renamer" && (
+            <span className={cn("ml-2 font-medium", saved.percent >= 0 ? "text-success" : "text-warning")}>
+              {t(saved.percent >= 0 ? "options.saved" : "options.grew", {
+                percent: `${Math.abs(saved.percent).toFixed(1)} %`,
+                before: formatBytes(saved.before),
+                after: formatBytes(saved.after),
+              })}
+            </span>
+          )}
         </p>
       )}
     </div>

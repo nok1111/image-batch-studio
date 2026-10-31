@@ -18,7 +18,11 @@ const scan = (names: string[], extra: Partial<ScanResult> = {}): ScanResult => (
   ...extra,
 });
 
-const output = { dir: "/out", format: "jpeg", quality: 80, conflict: "rename" } as const;
+const job = {
+  output: { dir: "/out", mode: { kind: "convert", format: "jpeg" }, quality: 80, lossless: false, metadata: "strip", targetSize: null, conflict: "rename" },
+  resize: null,
+  rename: null,
+} as const;
 
 describe("queue store", () => {
   beforeEach(() => {
@@ -30,11 +34,12 @@ describe("queue store", () => {
 
   it("keeps output options when the queue is cleared", () => {
     useQueueStore.setState({ options: {} });
-    useQueueStore.getState().setOptions({ format: "webp" });
-    useQueueStore.getState().setOptions({ quality: 50 });
+    useQueueStore.getState().setOptions("converter", { format: "webp" });
+    useQueueStore.getState().setOptions("converter", { quality: 50 });
+    useQueueStore.getState().setOptions("compressor", { quality: 30 });
     useQueueStore.getState().clear();
     // outputDir stays unset so it keeps following the Settings default.
-    expect(useQueueStore.getState().options).toEqual({ format: "webp", quality: 50 });
+    expect(useQueueStore.getState().options).toEqual({ converter: { format: "webp", quality: 50 }, compressor: { quality: 30 } });
   });
 
   it("adds scanned files and drops duplicates", async () => {
@@ -53,7 +58,7 @@ describe("queue store", () => {
     invoke.mockResolvedValueOnce(scan(["a.png", "b.png", "c.png", "d.png"]));
     await useQueueStore.getState().addPaths(["/in"]);
     invoke.mockResolvedValueOnce(undefined);
-    await useQueueStore.getState().start(output);
+    await useQueueStore.getState().start(job);
     const [cmd, args] = invoke.mock.calls[invoke.mock.calls.length - 1]!;
     expect(cmd).toBe("start_job");
     expect((args as { job: { inputs: string[] } }).job.inputs).toEqual(["/in/a.png", "/in/b.png", "/in/c.png", "/in/d.png"]);
@@ -63,8 +68,8 @@ describe("queue store", () => {
     const progress: JobEvent = {
       type: "progress",
       results: [
-        { index: 0, status: "done", output: "/out/a.jpg", outputSize: 50, error: null, warning: "firstFrameOnly" },
-        { index: 2, status: "failed", output: null, outputSize: null, error: { code: "decode", message: "bad" }, warning: null },
+        { index: 0, status: "done", output: "/out/a.jpg", outputSize: 50, error: null, warnings: ["firstFrameOnly"] },
+        { index: 2, status: "failed", output: null, outputSize: null, error: { code: "decode", message: "bad" }, warnings: [] },
       ],
     };
     useQueueStore.getState().applyEvent(progress, startedAt + 2000);
@@ -72,7 +77,7 @@ describe("queue store", () => {
     expect(s.completed).toBe(1);
     expect(s.failed).toBe(1);
     expect(s.items[2]?.status).toBe("failed");
-    expect(s.items[0]?.warning).toBe("firstFrameOnly");
+    expect(s.items[0]?.warnings).toEqual(["firstFrameOnly"]);
     expect(s.lastOutputDir).toBe("/out");
     expect(s.items[1]?.status).toBe("pending");
     expect(s.speed).toBeCloseTo(1);
@@ -91,7 +96,7 @@ describe("queue store", () => {
     invoke.mockResolvedValueOnce(scan(["a.png"]));
     await useQueueStore.getState().addPaths(["/in"]);
     invoke.mockResolvedValueOnce(undefined);
-    await useQueueStore.getState().start(output);
+    await useQueueStore.getState().start(job);
     useQueueStore.getState().clear();
     useQueueStore.getState().removeItem(0);
     await useQueueStore.getState().addPaths(["/other"]);
@@ -102,7 +107,7 @@ describe("queue store", () => {
     invoke.mockResolvedValueOnce(scan(["a.png"]));
     await useQueueStore.getState().addPaths(["/in"]);
     invoke.mockRejectedValueOnce({ code: "busy", message: "a batch is already running" });
-    await useQueueStore.getState().start(output);
+    await useQueueStore.getState().start(job);
     expect(useQueueStore.getState().running).toBe(false);
     expect(useQueueStore.getState().error).toBe("a batch is already running");
     expect(useQueueStore.getState().lastOutputDir).toBeNull();

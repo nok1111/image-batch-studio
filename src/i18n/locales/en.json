@@ -147,7 +147,63 @@
       "internal": "Unexpected error"
     },
     "warnings": {
-      "firstFrameOnly": "Animated: first frame only"
+      "firstFrameOnly": "Animated: first frame only",
+      "metadataDropped": "Format cannot keep all metadata",
+      "targetNotReached": "Target size not reachable",
+      "targetSizeUnsupported": "Target size ignored for this format",
+      "largerThanSource": "Larger than the original"
     }
+  },
+  "options": {
+    "sameAsSource": "Same as original",
+    "lossless": "Lossless (WebP)",
+    "metadata": "Metadata",
+    "metadataStrip": "Remove",
+    "metadataKeep": "Keep",
+    "preset": "Preset",
+    "presets": {
+      "maxQuality": "Max quality",
+      "balanced": "Balanced",
+      "high": "High compression",
+      "web": "Web",
+      "custom": "Custom"
+    },
+    "targetSize": "Target size (KB)",
+    "targetHint": "Lowers quality until each file fits (JPEG / WebP)",
+    "targetUnavailable": "Only for JPEG and lossy WebP",
+    "platformPreset": "Size preset",
+    "customSize": "Custom size",
+    "resizeMode": "Mode",
+    "modes": {
+      "fit": "Fit inside",
+      "fill": "Fill and crop",
+      "exact": "Exact (stretch)",
+      "width": "Width",
+      "height": "Height",
+      "percent": "Percentage"
+    },
+    "width": "Width (px)",
+    "height": "Height (px)",
+    "percent": "Percent (%)",
+    "allowUpscale": "Allow enlarging",
+    "presetName": "New preset name",
+    "savePreset": "Save preset",
+    "updatePreset": "Update preset",
+    "deletePreset": "Delete preset",
+    "template": "Name template",
+    "prefix": "Prefix",
+    "suffix": "Suffix",
+    "find": "Find",
+    "replace": "Replace with",
+    "start": "Start number",
+    "templateHint": "Tokens: {name} original name, {n} counter, {n:03} zero-padded counter, {date} modified date. Renamed copies go to the output folder; originals are not touched.",
+    "previewNeedsFolder": "Choose an output folder to preview the new names.",
+    "previewing": "Checking names…",
+    "previewOk": "Preview ready: no name collisions.",
+    "previewCollisions_one": "{{count}} name collides with an existing file or another image and was adjusted.",
+    "previewCollisions_other": "{{count}} names collide with existing files or other images and were adjusted.",
+    "previewError": "Cannot preview: {{message}}",
+    "saved": "Saved {{percent}} ({{before}} → {{after}})",
+    "grew": "{{percent}} larger ({{before}} → {{after}})"
   }
 }
