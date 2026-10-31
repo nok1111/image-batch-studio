@@ -29,7 +29,11 @@ pub fn run() {
             commands::settings::get_settings,
             commands::settings::save_settings,
             commands::settings::reset_settings,
+            commands::settings::list_resize_presets,
+            commands::settings::save_resize_preset,
+            commands::settings::delete_resize_preset,
             commands::jobs::scan_inputs,
+            commands::jobs::preview_job,
             commands::jobs::start_job,
             commands::jobs::cancel_job,
         ])

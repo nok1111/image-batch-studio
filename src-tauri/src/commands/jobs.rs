@@ -1,6 +1,6 @@
 use crate::error::{CommandError, CommandResult};
 use crate::state::AppState;
-use ibs_core::{FileResult, Job, JobEvent, ScanResult};
+use ibs_core::{FileResult, Job, JobEvent, PlannedOutput, ScanResult};
 use std::path::PathBuf;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{mpsc, Arc};
@@ -21,6 +21,18 @@ pub async fn scan_inputs(paths: Vec<String>) -> CommandResult<ScanResult> {
             code: "internal",
             message: e.to_string(),
         })
+}
+
+/// Output names a batch would produce (renamer preview, collision check).
+#[tauri::command]
+pub async fn preview_job(job: Job) -> CommandResult<Vec<PlannedOutput>> {
+    tauri::async_runtime::spawn_blocking(move || ibs_core::preview(&job))
+        .await
+        .map_err(|e| CommandError {
+            code: "internal",
+            message: e.to_string(),
+        })?
+        .map_err(Into::into)
 }
 
 /// Starts a batch in the background and streams `JobEvent`s on `on_event`.
