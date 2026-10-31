@@ -1,5 +1,5 @@
 import { create } from "zustand";
-import { errorMessage, ipc, type FileError, type FileStatus, type FileWarning, type JobEvent, type JobSummary, type OutputSpec } from "@/lib/ipc";
+import { errorMessage, ipc, type FileError, type ImageFormat, type FileStatus, type FileWarning, type JobEvent, type JobSummary, type OutputSpec } from "@/lib/ipc";
 
 export type ItemStatus = "pending" | FileStatus;
 
@@ -27,6 +27,13 @@ export interface QueueStats {
   running: boolean;
 }
 
+/** Output choices of the workspace, kept while navigating between pages. */
+export interface OutputOptions {
+  format: ImageFormat;
+  quality: number;
+  outputDir: string | null;
+}
+
 export interface ScanNotice {
   added: number;
   duplicates: number;
@@ -46,6 +53,8 @@ interface QueueState extends QueueStats {
   bytesDone: number;
   /** Output folder of the latest batch, for the status bar. */
   lastOutputDir: string | null;
+  options: OutputOptions | null;
+  setOptions: (options: OutputOptions) => void;
   addPaths: (paths: string[]) => Promise<void>;
   removeItem: (index: number) => void;
   clear: () => void;
@@ -65,6 +74,9 @@ export const useQueueStore = create<QueueState>((set, get) => ({
   error: null,
   bytesTotal: 0,
   lastOutputDir: null,
+  options: null,
+
+  setOptions: (options) => set({ options }),
 
   addPaths: async (paths) => {
     if (paths.length === 0 || get().running) return;

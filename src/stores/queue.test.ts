@@ -28,6 +28,12 @@ describe("queue store", () => {
     useQueueStore.getState().clear();
   });
 
+  it("keeps output options when the queue is cleared", () => {
+    useQueueStore.getState().setOptions({ format: "webp", quality: 50, outputDir: "/out" });
+    useQueueStore.getState().clear();
+    expect(useQueueStore.getState().options).toEqual({ format: "webp", quality: 50, outputDir: "/out" });
+  });
+
   it("adds scanned files and drops duplicates", async () => {
     invoke.mockResolvedValueOnce(scan(["a.png", "b.png"], { unsupported: 2 }));
     await useQueueStore.getState().addPaths(["/in"]);

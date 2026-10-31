@@ -48,15 +48,18 @@ export function FileList({ items, running, onRemove }: { items: QueueItem[]; run
               <span className="w-20 shrink-0 text-right text-xs tabular-nums text-text-secondary">
                 {item.outputSize !== null ? formatBytes(item.outputSize) : ""}
               </span>
-              <span className="flex w-28 shrink-0 justify-end" title={item.error?.message ?? item.output ?? undefined}>
+              <span className="flex w-28 shrink-0 justify-end" title={item.output ?? undefined}>
                 <Badge variant={STATUS_VARIANT[item.status]}>{statusLabel}</Badge>
               </span>
               {item.error ? (
-                <span className="w-40 shrink-0 truncate text-xs text-danger" title={item.error.message}>
+                <span className="w-64 shrink-0 truncate text-xs text-danger" title={t(`workspace.errors.${item.error.code}`)}>
                   {t(`workspace.errors.${item.error.code}`)}
                 </span>
               ) : (
-                <span className="w-40 shrink-0 truncate text-xs text-warning">
+                <span
+                  className="w-64 shrink-0 truncate text-xs text-warning"
+                  title={item.warning ? t(`workspace.warnings.${item.warning}`) : undefined}
+                >
                   {item.warning ? t(`workspace.warnings.${item.warning}`) : ""}
                 </span>
               )}
