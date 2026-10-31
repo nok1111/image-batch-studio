@@ -147,7 +147,63 @@
       "internal": "Error inesperado"
     },
     "warnings": {
-      "firstFrameOnly": "Animada: solo el primer fotograma"
+      "firstFrameOnly": "Animada: solo el primer fotograma",
+      "metadataDropped": "El formato no admite todos los metadatos",
+      "targetNotReached": "No se alcanza el tamaño objetivo",
+      "targetSizeUnsupported": "Tamaño objetivo ignorado en este formato",
+      "largerThanSource": "Más grande que el original"
     }
+  },
+  "options": {
+    "sameAsSource": "Igual que el original",
+    "lossless": "Sin pérdida (WebP)",
+    "metadata": "Metadatos",
+    "metadataStrip": "Quitar",
+    "metadataKeep": "Conservar",
+    "preset": "Preset",
+    "presets": {
+      "maxQuality": "Máxima calidad",
+      "balanced": "Equilibrado",
+      "high": "Alta compresión",
+      "web": "Web",
+      "custom": "Personalizado"
+    },
+    "targetSize": "Tamaño objetivo (KB)",
+    "targetHint": "Baja la calidad hasta que cada archivo quepa (JPEG / WebP)",
+    "targetUnavailable": "Solo para JPEG y WebP con pérdida",
+    "platformPreset": "Preset de tamaño",
+    "customSize": "Tamaño personalizado",
+    "resizeMode": "Modo",
+    "modes": {
+      "fit": "Encajar",
+      "fill": "Rellenar y recortar",
+      "exact": "Exacto (estirar)",
+      "width": "Ancho",
+      "height": "Alto",
+      "percent": "Porcentaje"
+    },
+    "width": "Ancho (px)",
+    "height": "Alto (px)",
+    "percent": "Porcentaje (%)",
+    "allowUpscale": "Permitir ampliar",
+    "presetName": "Nombre del nuevo preset",
+    "savePreset": "Guardar preset",
+    "updatePreset": "Actualizar preset",
+    "deletePreset": "Borrar preset",
+    "template": "Plantilla de nombre",
+    "prefix": "Prefijo",
+    "suffix": "Sufijo",
+    "find": "Buscar",
+    "replace": "Reemplazar por",
+    "start": "Número inicial",
+    "templateHint": "Tokens: {name} nombre original, {n} contador, {n:03} contador con ceros, {date} fecha de modificación. Las copias renombradas van a la carpeta de salida; los originales no se tocan.",
+    "previewNeedsFolder": "Elige una carpeta de salida para ver los nuevos nombres.",
+    "previewing": "Comprobando nombres…",
+    "previewOk": "Vista previa lista: sin colisiones de nombres.",
+    "previewCollisions_one": "{{count}} nombre coincide con un archivo existente u otra imagen y se ha ajustado.",
+    "previewCollisions_other": "{{count}} nombres coinciden con archivos existentes u otras imágenes y se han ajustado.",
+    "previewError": "No se puede previsualizar: {{message}}",
+    "saved": "Ahorro {{percent}} ({{before}} → {{after}})",
+    "grew": "{{percent}} más grande ({{before}} → {{after}})"
   }
 }

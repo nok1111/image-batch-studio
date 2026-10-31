@@ -5,9 +5,11 @@
 
 mod error;
 mod migrations;
+mod presets;
 mod settings;
 
 pub use error::StoreError;
+pub use presets::{ResizePreset, MAX_PRESET_NAME};
 pub use settings::{ConflictPolicy, ImageFormat, Language, Settings, Theme};
 
 use rusqlite::{Connection, OptionalExtension};

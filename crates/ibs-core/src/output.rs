@@ -53,11 +53,16 @@ impl Planner {
             .map(|s| s.to_string_lossy().into_owned())
             .filter(|s| !s.is_empty())
             .unwrap_or_else(|| "image".into());
+        self.plan_named(&stem, self.ext)
+    }
+
+    /// Like [`Planner::plan`] for an explicit file stem and extension.
+    pub fn plan_named(&self, stem: &str, ext: &str) -> Result<Plan, FileError> {
         let mut claimed = self
             .claimed
             .lock()
             .map_err(|_| FileError::new(FileErrorCode::Internal, "planner lock poisoned"))?;
-        let mut candidate = self.dir.join(format!("{stem}.{}", self.ext));
+        let mut candidate = self.dir.join(format!("{stem}.{ext}"));
         for n in 1..=MAX_RENAME_ATTEMPTS {
             let key = claim_key(&candidate);
             let is_source = self.sources.contains(&identity(&candidate));
@@ -94,7 +99,7 @@ impl Planner {
                     }
                 }
             }
-            candidate = self.dir.join(format!("{stem} ({n}).{}", self.ext));
+            candidate = self.dir.join(format!("{stem} ({n}).{ext}"));
         }
         Err(FileError::new(
             FileErrorCode::Io,

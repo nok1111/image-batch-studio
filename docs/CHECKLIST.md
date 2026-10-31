@@ -17,7 +17,11 @@
 - [ ] Thumbnails grid (list view only for now)
 
 ## Phase 3 — MVP modules
-- [ ] Converter  - [ ] Compressor  - [ ] Resizer  - [ ] Bulk Renamer
+- [x] Converter: 8 output formats incl. AVIF, lossy/lossless WebP, alpha kept where supported, metadata keep/strip (EXIF orientation applied)
+- [x] Compressor: presets, quality, same-as-source format, target size (JPEG/WebP), savings from real output sizes
+- [x] Resizer: fit / fill / exact / width / height / percent, no-upscale, editable size presets (SQLite)
+- [x] Bulk Renamer: templates `{name}` `{n:03}` `{date}`, prefix/suffix, find/replace, preview == result, collisions shown before running; copies to output
+- [x] Benchmark command + baseline (docs/BENCHMARK.md); Windows 1000×12 MP figure pending
 
 ## Phase 4 — Pro
 - [ ] Watermark  - [ ] Metadata Cleaner  - [ ] Crop & Rotate  - [ ] Analyzer  - [ ] Preset import/export  - [ ] AVIF input

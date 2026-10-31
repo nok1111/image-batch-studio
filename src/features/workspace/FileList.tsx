@@ -4,7 +4,11 @@ import { useVirtualizer } from "@tanstack/react-virtual";
 import { X } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { formatBytes } from "@/lib/format";
+import type { PlannedOutput } from "@/lib/ipc";
+import { cn } from "@/lib/utils";
 import type { QueueItem } from "@/stores/queue";
+
+const basename = (p: string) => p.split(/[\\/]/).pop() ?? p;
 
 const ROW_HEIGHT = 40;
 
@@ -17,7 +21,7 @@ const STATUS_VARIANT = {
 } as const;
 
 /** Virtualized so batches of tens of thousands of files stay smooth. */
-export function FileList({ items, running, onRemove }: { items: QueueItem[]; running: boolean; onRemove: (i: number) => void }) {
+export function FileList({ items, running, onRemove, previews }: { items: QueueItem[]; running: boolean; onRemove: (i: number) => void; previews?: PlannedOutput[] | null }) {
   const { t } = useTranslation();
   const parentRef = useRef<HTMLDivElement>(null);
   const virtualizer = useVirtualizer({
@@ -32,6 +36,9 @@ export function FileList({ items, running, onRemove }: { items: QueueItem[]; run
       <div style={{ height: virtualizer.getTotalSize(), position: "relative" }}>
         {virtualizer.getVirtualItems().map((row) => {
           const item = items[row.index]!;
+          const plan = previews?.[row.index];
+          const warnings = item.warnings.map((w) => t(`workspace.warnings.${w}`)).join(" · ");
+          const delta = item.outputSize !== null && item.size > 0 ? (item.outputSize / item.size - 1) * 100 : null;
           const statusLabel =
             item.status === "pending" && running ? t("workspace.status.queued") : t(`workspace.status.${item.status}`);
           return (
@@ -48,6 +55,17 @@ export function FileList({ items, running, onRemove }: { items: QueueItem[]; run
               <span className="w-20 shrink-0 text-right text-xs tabular-nums text-text-secondary">
                 {item.outputSize !== null ? formatBytes(item.outputSize) : ""}
               </span>
+              <span className={cn("w-14 shrink-0 text-right text-xs tabular-nums", delta !== null && delta <= 0 ? "text-success" : "text-warning")}>
+                {delta !== null && item.status === "done" ? `${delta > 0 ? "+" : "−"}${Math.abs(delta).toFixed(0)}%` : ""}
+              </span>
+              {previews !== undefined && (
+                <span
+                  className={cn("w-56 shrink-0 truncate text-xs", plan?.renumbered || plan?.action === "skip" || plan?.action === "replace" ? "text-warning" : plan?.error ? "text-danger" : "text-text")}
+                  title={plan?.target ?? (plan?.error ? `${t(`workspace.errors.${plan.error.code}`)}\n${plan.error.message}` : undefined)}
+                >
+                  {plan?.target ? `→ ${basename(plan.target)}${plan.action === "skip" ? ` (${t("workspace.status.skipped")})` : ""}` : plan?.error ? t(`workspace.errors.${plan.error.code}`) : ""}
+                </span>
+              )}
               <span className="flex w-28 shrink-0 justify-end" title={item.output ?? undefined}>
                 <Badge variant={STATUS_VARIANT[item.status]}>{statusLabel}</Badge>
               </span>
@@ -58,9 +76,9 @@ export function FileList({ items, running, onRemove }: { items: QueueItem[]; run
               ) : (
                 <span
                   className="w-64 shrink-0 truncate text-xs text-warning"
-                  title={item.warning ? t(`workspace.warnings.${item.warning}`) : undefined}
+                  title={warnings || undefined}
                 >
-                  {item.warning ? t(`workspace.warnings.${item.warning}`) : ""}
+                  {warnings}
                 </span>
               )}
               <button

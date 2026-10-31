@@ -14,7 +14,7 @@ export function ModulePage({ id }: { id: ModuleId }) {
     return (
       <div className="flex h-full min-h-0 flex-col">
         <PageHeader title={t(`nav.${id}`)} description={t(`modules.${id}`)} />
-        <Workspace />
+        <Workspace module={id} />
       </div>
     );
   }

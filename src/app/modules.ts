@@ -34,10 +34,10 @@ export interface ToolModule {
 /** Sidebar order follows the product spec. */
 export const TOOL_MODULES: ToolModule[] = [
   { id: "converter", path: "/converter", icon: RefreshCw, available: true, accent: "accent" },
-  { id: "compressor", path: "/compressor", icon: Minimize2, available: false, accent: "teal" },
-  { id: "resizer", path: "/resizer", icon: Scaling, available: false, accent: "accent" },
+  { id: "compressor", path: "/compressor", icon: Minimize2, available: true, accent: "teal" },
+  { id: "resizer", path: "/resizer", icon: Scaling, available: true, accent: "accent" },
   { id: "watermark", path: "/watermark", icon: Stamp, available: false, accent: "teal" },
-  { id: "renamer", path: "/renamer", icon: TextCursorInput, available: false, accent: "accent" },
+  { id: "renamer", path: "/renamer", icon: TextCursorInput, available: true, accent: "accent" },
   { id: "metadata", path: "/metadata", icon: ShieldCheck, available: false, accent: "teal" },
   { id: "cropRotate", path: "/crop-rotate", icon: Crop, available: false, accent: "accent" },
   { id: "analyzer", path: "/analyzer", icon: ScanSearch, available: false, accent: "teal" },

@@ -2,7 +2,8 @@
 
 use ibs_core::output::TEMP_PREFIX;
 use ibs_core::{
-    run, ConflictPolicy, FileErrorCode, FileResult, FileStatus, ImageFormat, Job, OutputSpec,
+    run, ConflictPolicy, FileErrorCode, FileResult, FileStatus, ImageFormat, Job, MetadataPolicy,
+    OutputMode, OutputSpec,
 };
 use image::{Rgba, RgbaImage};
 use std::path::{Path, PathBuf};
@@ -56,10 +57,15 @@ fn job(inputs: &[PathBuf], out: &Path, format: ImageFormat, conflict: ConflictPo
             .collect(),
         output: OutputSpec {
             dir: out.to_string_lossy().into_owned(),
-            format,
+            mode: OutputMode::Convert(format),
             quality: 80,
+            lossless: true,
+            metadata: MetadataPolicy::Strip,
+            target_size: None,
             conflict,
         },
+        resize: None,
+        rename: None,
     }
 }
 
@@ -355,11 +361,13 @@ fn invalid_jobs_are_rejected_before_starting() {
     let mut j = job(
         std::slice::from_ref(&src),
         d.path(),
-        ImageFormat::Avif,
+        ImageFormat::Png,
         ConflictPolicy::Rename,
     );
+    j.output.target_size = Some(1000);
     assert!(run(&j, 1, &cancel, |_| {}).is_err());
-    j.output.format = ImageFormat::Png;
+    j.output.target_size = None;
+    j.output.mode = OutputMode::Convert(ImageFormat::Png);
     j.output.dir = "relative/dir".into();
     assert!(run(&j, 1, &cancel, |_| {}).is_err());
     j.output.dir = d.path().to_string_lossy().into_owned();
@@ -403,8 +411,8 @@ fn animated_gif_is_flagged_as_first_frame_only() {
         &AtomicBool::new(false),
     );
     assert_eq!(r[0].status, FileStatus::Done);
-    assert_eq!(r[0].warning, Some(ibs_core::FileWarning::FirstFrameOnly));
-    assert_eq!(r[1].warning, None);
+    assert_eq!(r[0].warnings, vec![ibs_core::FileWarning::FirstFrameOnly]);
+    assert!(r[1].warnings.is_empty());
 }
 
 #[cfg(unix)]

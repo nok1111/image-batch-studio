@@ -3,10 +3,28 @@ use rusqlite::Connection;
 
 /// Ordered schema migrations; index + 1 is the resulting `user_version`.
 /// Never edit a released migration, only append new ones.
-const MIGRATIONS: &[&str] = &["CREATE TABLE settings (
+const MIGRATIONS: &[&str] = &[
+    "CREATE TABLE settings (
         key   TEXT PRIMARY KEY NOT NULL,
         value TEXT NOT NULL
-    );"];
+    );",
+    r#"CREATE TABLE resize_presets (
+        id       INTEGER PRIMARY KEY AUTOINCREMENT,
+        name     TEXT NOT NULL,
+        spec     TEXT NOT NULL,
+        position INTEGER NOT NULL
+    );
+    INSERT INTO resize_presets (name, spec, position) VALUES
+        ('Instagram — square', '{"mode":"fill","width":1080,"height":1080,"percent":100,"allowUpscale":false}', 0),
+        ('Instagram — portrait', '{"mode":"fill","width":1080,"height":1350,"percent":100,"allowUpscale":false}', 1),
+        ('Instagram / TikTok — story', '{"mode":"fill","width":1080,"height":1920,"percent":100,"allowUpscale":false}', 2),
+        ('Facebook — post', '{"mode":"fill","width":1200,"height":630,"percent":100,"allowUpscale":false}', 3),
+        ('X — post', '{"mode":"fill","width":1600,"height":900,"percent":100,"allowUpscale":false}', 4),
+        ('LinkedIn — post', '{"mode":"fill","width":1200,"height":627,"percent":100,"allowUpscale":false}', 5),
+        ('YouTube — thumbnail', '{"mode":"fill","width":1280,"height":720,"percent":100,"allowUpscale":false}', 6),
+        ('Full HD (fit)', '{"mode":"fit","width":1920,"height":1080,"percent":100,"allowUpscale":false}', 7),
+        ('Web — 1200 px wide', '{"mode":"width","width":1200,"height":0,"percent":100,"allowUpscale":false}', 8);"#,
+];
 
 pub const LATEST: usize = MIGRATIONS.len();
 

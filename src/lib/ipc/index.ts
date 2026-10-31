@@ -3,6 +3,8 @@ import type { Settings } from "./bindings/Settings";
 import type { Job } from "./bindings/Job";
 import type { JobEvent } from "./bindings/JobEvent";
 import type { ScanResult } from "./bindings/ScanResult";
+import type { PlannedOutput } from "./bindings/PlannedOutput";
+import type { ResizePreset } from "./bindings/ResizePreset";
 
 export type { Settings } from "./bindings/Settings";
 export type { Theme } from "./bindings/Theme";
@@ -20,6 +22,14 @@ export type { JobEvent } from "./bindings/JobEvent";
 export type { JobSummary } from "./bindings/JobSummary";
 export type { OutputSpec } from "./bindings/OutputSpec";
 export type { ScanResult } from "./bindings/ScanResult";
+export type { MetadataPolicy } from "./bindings/MetadataPolicy";
+export type { OutputMode } from "./bindings/OutputMode";
+export type { PlannedAction } from "./bindings/PlannedAction";
+export type { PlannedOutput } from "./bindings/PlannedOutput";
+export type { RenameSpec } from "./bindings/RenameSpec";
+export type { ResizeMode } from "./bindings/ResizeMode";
+export type { ResizePreset } from "./bindings/ResizePreset";
+export type { ResizeSpec } from "./bindings/ResizeSpec";
 
 /** Shape of errors returned by Rust commands (see src-tauri/src/error.rs). */
 export interface CommandError {
@@ -54,4 +64,8 @@ export const ipc = {
     return invoke<void>("start_job", { job, onEvent: channel });
   },
   cancelJob: () => invoke<boolean>("cancel_job"),
+  previewJob: (job: Job) => invoke<PlannedOutput[]>("preview_job", { job }),
+  listResizePresets: () => invoke<ResizePreset[]>("list_resize_presets"),
+  saveResizePreset: (preset: ResizePreset) => invoke<ResizePreset>("save_resize_preset", { preset }),
+  deleteResizePreset: (id: number) => invoke<void>("delete_resize_preset", { id }),
 };
