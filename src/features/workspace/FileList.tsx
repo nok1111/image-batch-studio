@@ -52,7 +52,7 @@ export function FileList({ items, running, onRemove }: { items: QueueItem[]; run
                 <Badge variant={STATUS_VARIANT[item.status]}>{statusLabel}</Badge>
               </span>
               {item.error ? (
-                <span className="w-64 shrink-0 truncate text-xs text-danger" title={t(`workspace.errors.${item.error.code}`)}>
+                <span className="w-64 shrink-0 truncate text-xs text-danger" title={`${t(`workspace.errors.${item.error.code}`)}\n${item.error.message}`}>
                   {t(`workspace.errors.${item.error.code}`)}
                 </span>
               ) : (
