@@ -49,6 +49,8 @@ interface QueueState extends QueueStats {
   bytesDone: number;
   /** Output folder of the latest batch, for the status bar. */
   lastOutputDir: string | null;
+  /** Output mode of the latest batch, so the Renamer only shows outputs it wrote. */
+  lastMode: Job["output"]["mode"]["kind"] | null;
   /** Per-module choices, kept while navigating; unset fields follow Settings. */
   options: Partial<Record<ModuleId, Partial<ModuleOptions>>>;
   setOptions: (module: ModuleId, patch: Partial<ModuleOptions>) => void;
@@ -71,6 +73,7 @@ export const useQueueStore = create<QueueState>((set, get) => ({
   error: null,
   bytesTotal: 0,
   lastOutputDir: null,
+  lastMode: null,
   options: {},
 
   setOptions: (module, patch) => set({ options: { ...get().options, [module]: { ...get().options[module], ...patch } } }),
@@ -122,6 +125,7 @@ export const useQueueStore = create<QueueState>((set, get) => ({
     set({
       ...idle,
       running: true,
+      lastMode: job.output.mode.kind,
       startedAt: Date.now(),
       error: null,
       items: items.map((i) => ({ ...i, status: "pending", output: null, outputSize: null, error: null, warnings: [] })),

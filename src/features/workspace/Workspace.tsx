@@ -153,7 +153,7 @@ export function Workspace({ module }: { module: ModuleId }) {
             <p className="text-xs text-text-secondary">{t("workspace.dropHint")}</p>
           </div>
         ) : (
-          <FileList items={q.items} running={q.running} onRemove={q.removeItem} previews={module === "renamer" ? (previews ?? []) : undefined} />
+          <FileList items={q.items} running={q.running} onRemove={q.removeItem} previews={module === "renamer" ? (previews ?? []) : undefined} renamed={q.lastMode === "copyOriginal"} />
         )}
         {dragging && (
           <div className="pointer-events-none absolute inset-0 flex items-center justify-center bg-accent/10 text-sm font-medium text-accent">

@@ -21,7 +21,7 @@ const STATUS_VARIANT = {
 } as const;
 
 /** Virtualized so batches of tens of thousands of files stay smooth. */
-export function FileList({ items, running, onRemove, previews }: { items: QueueItem[]; running: boolean; onRemove: (i: number) => void; previews?: PlannedOutput[] | null }) {
+export function FileList({ items, running, onRemove, previews, renamed = false }: { items: QueueItem[]; running: boolean; onRemove: (i: number) => void; previews?: PlannedOutput[] | null; renamed?: boolean }) {
   const { t } = useTranslation();
   const parentRef = useRef<HTMLDivElement>(null);
   const virtualizer = useVirtualizer({
@@ -59,7 +59,7 @@ export function FileList({ items, running, onRemove, previews }: { items: QueueI
                 {delta !== null && item.status === "done" ? `${delta > 0 ? "+" : "−"}${Math.abs(delta).toFixed(0)}%` : ""}
               </span>
               {previews !== undefined &&
-                (item.output ? (
+                (item.output && item.status === "done" && renamed ? (
                   <span className="w-56 shrink-0 truncate text-xs text-text" title={item.output}>
                     → {basename(item.output)}
                   </span>
