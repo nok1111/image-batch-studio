@@ -11,6 +11,7 @@ serde_json.workspace = true
 thiserror.workspace = true
 rusqlite.workspace = true
 ts-rs.workspace = true
+ibs-core = { path = "../ibs-core" }
 
 [dev-dependencies]
 tempfile.workspace = true

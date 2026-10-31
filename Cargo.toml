@@ -1,6 +1,6 @@
 [workspace]
 resolver = "2"
-members = ["src-tauri", "crates/ibs-store"]
+members = ["src-tauri", "crates/ibs-core", "crates/ibs-store"]
 
 [workspace.package]
 version = "0.1.0"

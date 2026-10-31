@@ -3,12 +3,21 @@ import { Hammer } from "lucide-react";
 import { moduleById, type ModuleId } from "@/app/modules";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { Card } from "@/components/ui/card";
+import { Workspace } from "@/features/workspace/Workspace";
 
 /** Shell for a tool module. Modules render a notice until they are implemented and tested. */
 export function ModulePage({ id }: { id: ModuleId }) {
   const { t } = useTranslation();
   const mod = moduleById(id);
   const Icon = mod.icon;
+  if (mod.available) {
+    return (
+      <div className="flex h-full min-h-0 flex-col">
+        <PageHeader title={t(`nav.${id}`)} description={t(`modules.${id}`)} />
+        <Workspace />
+      </div>
+    );
+  }
   return (
     <div>
       <PageHeader title={t(`nav.${id}`)} description={t(`modules.${id}`)} />

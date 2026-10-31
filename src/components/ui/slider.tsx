@@ -9,6 +9,7 @@ interface SliderProps {
   onValueChange: (value: number) => void;
   onValueCommit?: (value: number) => void;
   className?: string;
+  disabled?: boolean;
   id?: string;
   "aria-label"?: string;
 }
@@ -22,6 +23,7 @@ export function Slider({ value, onValueChange, onValueCommit, className, ...prop
       min={props.min}
       max={props.max}
       step={props.step ?? 1}
+      disabled={props.disabled}
       className={cn("relative flex h-5 w-full touch-none select-none items-center", className)}
     >
       <SliderPrimitive.Track className="relative h-1.5 grow overflow-hidden rounded-full bg-bg-secondary">

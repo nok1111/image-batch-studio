@@ -58,7 +58,8 @@
     "speed": "{{value}} img/s",
     "eta": "Restante",
     "openOutput": "Abrir pasta de saída",
-    "noOutput": "Nenhuma pasta de saída definida"
+    "noOutput": "Nenhuma pasta de saída definida",
+    "processing": "Processando"
   },
   "settings": {
     "title": "Configurações",
@@ -97,5 +98,53 @@
     "saved": "Salvo",
     "saveError": "Não foi possível salvar as configurações: {{message}}",
     "loadError": "Não foi possível carregar as configurações: {{message}}"
+  },
+  "workspace": {
+    "addFiles": "Adicionar arquivos",
+    "addFolder": "Adicionar pasta",
+    "clear": "Limpar lista",
+    "images": "Imagens",
+    "fileList": "Arquivos a processar",
+    "scanning": "Lendo arquivos…",
+    "added_one": "{{count}} arquivo adicionado",
+    "added_other": "{{count}} arquivos adicionados",
+    "duplicates_one": "{{count}} já estava na lista",
+    "duplicates_other": "{{count}} já estavam na lista",
+    "unsupported_one": "{{count}} arquivo não compatível ignorado",
+    "unsupported_other": "{{count}} arquivos não compatíveis ignorados",
+    "truncated": "Limite de arquivos atingido",
+    "dropTitle": "Solte imagens ou pastas aqui",
+    "dropHint": "Ou use Adicionar arquivos / Adicionar pasta. As pastas são lidas com suas subpastas.",
+    "dropActive": "Solte para adicionar",
+    "format": "Formato de saída",
+    "quality": "Qualidade",
+    "outputFolder": "Pasta de saída",
+    "noFolder": "Escolha uma pasta…",
+    "start_one": "Processar {{count}} imagem",
+    "start_other": "Processar {{count}} imagens",
+    "cancel": "Cancelar",
+    "cancelling": "Cancelando…",
+    "summary": "Concluído em {{time}}: {{done}} concluídas, {{skipped}} ignoradas, {{failed}} com erro, {{cancelled}} canceladas.",
+    "jobError": "Não foi possível executar o lote: {{message}}",
+    "remove": "Remover {{name}}",
+    "status": {
+      "pending": "Pendente",
+      "queued": "Na fila",
+      "done": "Concluído",
+      "skipped": "Ignorado",
+      "failed": "Erro",
+      "cancelled": "Cancelado"
+    },
+    "errors": {
+      "unsupported": "Não é uma imagem compatível",
+      "decode": "Corrompida ou incompleta",
+      "tooLarge": "Imagem grande demais",
+      "io": "Erro de acesso ao arquivo",
+      "encode": "Não foi possível codificar",
+      "verify": "A saída não passou na verificação",
+      "wouldOverwriteSource": "Sobrescreveria o original",
+      "outputUnsupported": "Formato não possível para esta imagem",
+      "internal": "Erro inesperado"
+    }
   }
 }

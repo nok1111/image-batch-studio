@@ -16,7 +16,10 @@ pub fn run() {
             let data_dir = app.path().app_data_dir()?;
             std::fs::create_dir_all(&data_dir)?;
             let store = ibs_store::Store::open(&data_dir.join(DB_FILE))?;
-            app.manage(AppState { store });
+            app.manage(AppState {
+                store,
+                running_job: Default::default(),
+            });
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![
@@ -25,6 +28,9 @@ pub fn run() {
             commands::settings::get_settings,
             commands::settings::save_settings,
             commands::settings::reset_settings,
+            commands::jobs::scan_inputs,
+            commands::jobs::start_job,
+            commands::jobs::cancel_job,
         ])
         .run(tauri::generate_context!())
         .expect("error while running Image Batch Studio");
