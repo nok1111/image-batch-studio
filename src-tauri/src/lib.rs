@@ -20,6 +20,7 @@ pub fn run() {
                 store,
                 running_job: Default::default(),
                 last_output_dir: Default::default(),
+                viewable: Default::default(),
             });
             Ok(())
         })
@@ -34,6 +35,7 @@ pub fn run() {
             commands::settings::delete_resize_preset,
             commands::jobs::scan_inputs,
             commands::jobs::preview_job,
+            commands::jobs::load_image,
             commands::jobs::start_job,
             commands::jobs::cancel_job,
         ])
