@@ -41,7 +41,7 @@ export function Workspace({ module }: { module: ModuleId }) {
   const [previewError, setPreviewError] = useState<string | null>(null);
 
   const previewKey =
-    module === "renamer" && outputDir && q.items.length > 0 && !q.running
+    module === "renamer" && outputDir && q.items.length > 0 && !q.running && q.items.every((i) => i.status === "pending")
       ? JSON.stringify(buildJob(module, o, settings, outputDir, q.items.map((i) => i.path)))
       : null;
   useEffect(() => {
@@ -192,7 +192,7 @@ export function Workspace({ module }: { module: ModuleId }) {
         )}
       </Card>
 
-      {module === "renamer" && q.items.length > 0 && !q.running && (
+      {module === "renamer" && q.items.length > 0 && !q.running && q.items.every((i) => i.status === "pending") && (
         <p className={cn("text-xs", previewError || collisions > 0 ? "text-warning" : "text-text-secondary")} aria-live="polite">
           {previewError
             ? t("options.previewError", { message: previewError })
