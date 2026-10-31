@@ -27,24 +27,29 @@ pub fn app_info(app: AppHandle) -> AppInfo {
     }
 }
 
-/// Opens the configured default output folder in the system file manager.
-/// The path comes from persisted settings, never from the frontend, so the
-/// webview cannot ask the OS to open arbitrary paths.
+/// Opens the latest batch's output folder, else the configured default, in the
+/// system file manager. The path never comes from the frontend, so the webview
+/// cannot ask the OS to open arbitrary paths.
 #[tauri::command]
 pub fn open_output_dir(
     app: AppHandle,
     state: tauri::State<'_, crate::state::AppState>,
 ) -> crate::error::CommandResult<()> {
     use tauri_plugin_opener::OpenerExt;
-    let dir =
-        state
-            .store
-            .settings()?
-            .default_output_dir
-            .ok_or_else(|| crate::error::CommandError {
+    let last = state
+        .last_output_dir
+        .lock()
+        .ok()
+        .and_then(|d| d.as_ref().map(|p| p.to_string_lossy().into_owned()));
+    let dir = match last {
+        Some(d) => d,
+        None => state.store.settings()?.default_output_dir.ok_or_else(|| {
+            crate::error::CommandError {
                 code: "no_output_dir",
                 message: "no default output folder is configured".into(),
-            })?;
+            }
+        })?,
+    };
     if !std::path::Path::new(&dir).is_dir() {
         return Err(crate::error::CommandError {
             code: "output_dir_missing",

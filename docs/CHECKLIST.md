@@ -10,10 +10,11 @@
 - [x] CI: lint, typecheck, tests, Windows installer build
 
 ## Phase 2 — Core engine
-- [ ] File/folder selection, drag & drop
-- [ ] Processing queue, background workers, configurable concurrency
-- [ ] Progress events, cancellation, per-file status and errors
-- [ ] Output safety (ADR 0004)
+- [x] File/folder selection, drag & drop (recursive scan, dedupe, hidden files ignored)
+- [x] Processing queue, background workers, configurable concurrency
+- [x] Progress events (batched ~10 Hz), cancellation, per-file status and errors
+- [x] Output safety (ADR 0004): temp → verify → atomic rename; sources never targets
+- [ ] Thumbnails grid (list view only for now)
 
 ## Phase 3 — MVP modules
 - [ ] Converter  - [ ] Compressor  - [ ] Resizer  - [ ] Bulk Renamer

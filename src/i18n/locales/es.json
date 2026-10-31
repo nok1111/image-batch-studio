@@ -58,7 +58,8 @@
     "speed": "{{value}} img/s",
     "eta": "Restante",
     "openOutput": "Abrir carpeta de salida",
-    "noOutput": "Sin carpeta de salida"
+    "noOutput": "Sin carpeta de salida",
+    "processing": "Procesando"
   },
   "settings": {
     "title": "Ajustes",
@@ -97,5 +98,56 @@
     "saved": "Guardado",
     "saveError": "No se pudieron guardar los ajustes: {{message}}",
     "loadError": "No se pudieron cargar los ajustes: {{message}}"
+  },
+  "workspace": {
+    "addFiles": "Añadir archivos",
+    "addFolder": "Añadir carpeta",
+    "clear": "Vaciar lista",
+    "images": "Imágenes",
+    "fileList": "Archivos a procesar",
+    "scanning": "Leyendo archivos…",
+    "added_one": "{{count}} archivo añadido",
+    "added_other": "{{count}} archivos añadidos",
+    "duplicates_one": "{{count}} ya estaba en la lista",
+    "duplicates_other": "{{count}} ya estaban en la lista",
+    "unsupported_one": "{{count}} archivo no compatible ignorado",
+    "unsupported_other": "{{count}} archivos no compatibles ignorados",
+    "truncated": "Se alcanzó el límite de archivos",
+    "dropTitle": "Suelta aquí imágenes o carpetas",
+    "dropHint": "O usa Añadir archivos / Añadir carpeta. Las carpetas se recorren con sus subcarpetas.",
+    "dropActive": "Suelta para añadir",
+    "format": "Formato de salida",
+    "quality": "Calidad",
+    "outputFolder": "Carpeta de salida",
+    "noFolder": "Elige una carpeta…",
+    "start_one": "Procesar {{count}} imagen",
+    "start_other": "Procesar {{count}} imágenes",
+    "cancel": "Cancelar",
+    "cancelling": "Cancelando…",
+    "summary": "Terminado en {{time}}: {{done}} correctas, {{skipped}} omitidas, {{failed}} con error, {{cancelled}} canceladas.",
+    "jobError": "No se pudo ejecutar el lote: {{message}}",
+    "remove": "Quitar {{name}}",
+    "status": {
+      "pending": "Pendiente",
+      "queued": "En cola",
+      "done": "Hecho",
+      "skipped": "Omitido",
+      "failed": "Error",
+      "cancelled": "Cancelado"
+    },
+    "errors": {
+      "unsupported": "No es una imagen compatible",
+      "decode": "Dañada o incompleta",
+      "tooLarge": "Imagen demasiado grande",
+      "io": "Error de acceso al archivo",
+      "encode": "No se pudo codificar",
+      "verify": "La salida no superó la verificación",
+      "wouldOverwriteSource": "Sobrescribiría el original",
+      "outputUnsupported": "Formato no posible para esta imagen",
+      "internal": "Error inesperado"
+    },
+    "warnings": {
+      "firstFrameOnly": "Animada: solo el primer fotograma"
+    }
   }
 }

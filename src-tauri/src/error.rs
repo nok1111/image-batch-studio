@@ -23,3 +23,18 @@ impl From<ibs_store::StoreError> for CommandError {
 }
 
 pub type CommandResult<T> = Result<T, CommandError>;
+
+impl From<ibs_core::JobError> for CommandError {
+    fn from(e: ibs_core::JobError) -> Self {
+        let code = match e {
+            ibs_core::JobError::OutputDir(_) | ibs_core::JobError::OutputDirNotAbsolute => {
+                "output_dir"
+            }
+            _ => "invalid_job",
+        };
+        Self {
+            code,
+            message: e.to_string(),
+        }
+    }
+}

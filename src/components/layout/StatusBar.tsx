@@ -8,13 +8,14 @@ import { ipc } from "@/lib/ipc";
 export function StatusBar() {
   const { t } = useTranslation();
   const q = useQueueStore();
-  const outputDir = useSettingsStore((s) => s.settings?.defaultOutputDir ?? null);
+  const defaultDir = useSettingsStore((s) => s.settings?.defaultOutputDir ?? null);
+  const outputDir = q.lastOutputDir ?? defaultDir;
 
   return (
     <footer className="flex h-9 shrink-0 items-center gap-5 border-t border-border bg-bg-secondary px-4 text-xs text-text-secondary">
       <span className="flex items-center gap-1.5">
         <span className={q.running ? "size-2 rounded-full bg-accent-2" : "size-2 rounded-full bg-text-secondary/50"} />
-        {t("status.ready")}
+        {q.running ? t("status.processing") : t("status.ready")}
       </span>
       <Stat icon={Files} label={t("status.total")} value={q.total} />
       <Stat icon={CircleCheck} label={t("status.completed")} value={q.completed} />

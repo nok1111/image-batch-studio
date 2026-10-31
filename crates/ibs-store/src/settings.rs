@@ -1,4 +1,5 @@
 use crate::StoreError;
+pub use ibs_core::{ConflictPolicy, ImageFormat};
 use serde::{Deserialize, Serialize};
 use std::path::Path;
 use ts_rs::TS;
@@ -28,33 +29,6 @@ pub enum Language {
     Es,
     #[serde(rename = "pt-BR")]
     PtBr,
-}
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, TS, Default)]
-#[serde(rename_all = "lowercase")]
-#[ts(export)]
-pub enum ImageFormat {
-    Png,
-    #[default]
-    Jpeg,
-    Webp,
-    Avif,
-    Bmp,
-    Tiff,
-    Gif,
-    Ico,
-}
-
-/// What to do when an output file already exists. Source files are never
-/// overwritten regardless of this policy.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, TS, Default)]
-#[serde(rename_all = "lowercase")]
-#[ts(export)]
-pub enum ConflictPolicy {
-    #[default]
-    Rename,
-    Skip,
-    Overwrite,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]

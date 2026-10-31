@@ -58,7 +58,8 @@
     "speed": "{{value}} img/s",
     "eta": "Remaining",
     "openOutput": "Open output folder",
-    "noOutput": "No output folder set"
+    "noOutput": "No output folder set",
+    "processing": "Processing"
   },
   "settings": {
     "title": "Settings",
@@ -97,5 +98,56 @@
     "saved": "Saved",
     "saveError": "Could not save settings: {{message}}",
     "loadError": "Could not load settings: {{message}}"
+  },
+  "workspace": {
+    "addFiles": "Add files",
+    "addFolder": "Add folder",
+    "clear": "Clear list",
+    "images": "Images",
+    "fileList": "Files to process",
+    "scanning": "Reading files…",
+    "added_one": "{{count}} file added",
+    "added_other": "{{count}} files added",
+    "duplicates_one": "{{count}} already in the list",
+    "duplicates_other": "{{count}} already in the list",
+    "unsupported_one": "{{count}} unsupported file ignored",
+    "unsupported_other": "{{count}} unsupported files ignored",
+    "truncated": "File limit reached",
+    "dropTitle": "Drop images or folders here",
+    "dropHint": "Or use Add files / Add folder. Folders are scanned recursively.",
+    "dropActive": "Drop to add",
+    "format": "Output format",
+    "quality": "Quality",
+    "outputFolder": "Output folder",
+    "noFolder": "Choose a folder…",
+    "start_one": "Process {{count}} image",
+    "start_other": "Process {{count}} images",
+    "cancel": "Cancel",
+    "cancelling": "Cancelling…",
+    "summary": "Finished in {{time}}: {{done}} done, {{skipped}} skipped, {{failed}} failed, {{cancelled}} cancelled.",
+    "jobError": "Could not run the batch: {{message}}",
+    "remove": "Remove {{name}}",
+    "status": {
+      "pending": "Pending",
+      "queued": "Queued",
+      "done": "Done",
+      "skipped": "Skipped",
+      "failed": "Failed",
+      "cancelled": "Cancelled"
+    },
+    "errors": {
+      "unsupported": "Not a supported image",
+      "decode": "Corrupted or truncated",
+      "tooLarge": "Image too large",
+      "io": "File access error",
+      "encode": "Could not encode",
+      "verify": "Output failed verification",
+      "wouldOverwriteSource": "Would overwrite the original",
+      "outputUnsupported": "Format not possible for this image",
+      "internal": "Unexpected error"
+    },
+    "warnings": {
+      "firstFrameOnly": "Animated: first frame only"
+    }
   }
 }
