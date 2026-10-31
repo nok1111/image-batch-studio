@@ -29,9 +29,12 @@ describe("queue store", () => {
   });
 
   it("keeps output options when the queue is cleared", () => {
-    useQueueStore.getState().setOptions({ format: "webp", quality: 50, outputDir: "/out" });
+    useQueueStore.setState({ options: {} });
+    useQueueStore.getState().setOptions({ format: "webp" });
+    useQueueStore.getState().setOptions({ quality: 50 });
     useQueueStore.getState().clear();
-    expect(useQueueStore.getState().options).toEqual({ format: "webp", quality: 50, outputDir: "/out" });
+    // outputDir stays unset so it keeps following the Settings default.
+    expect(useQueueStore.getState().options).toEqual({ format: "webp", quality: 50 });
   });
 
   it("adds scanned files and drops duplicates", async () => {

@@ -32,14 +32,12 @@ export function Workspace() {
   const { t } = useTranslation();
   const settings = useSettingsStore((s) => s.settings)!;
   const q = useQueueStore();
-  const { format, quality, outputDir } = q.options ?? {
-    format: settings.defaultFormat === "avif" ? "jpeg" : settings.defaultFormat,
-    quality: settings.defaultQuality,
-    outputDir: settings.defaultOutputDir,
-  };
-  const setFormat = (v: ImageFormat) => q.setOptions({ format: v, quality, outputDir });
-  const setQuality = (v: number) => q.setOptions({ format, quality: v, outputDir });
-  const setOutputDir = (v: string) => q.setOptions({ format, quality, outputDir: v });
+  const format = q.options.format ?? (settings.defaultFormat === "avif" ? "jpeg" : settings.defaultFormat);
+  const quality = q.options.quality ?? settings.defaultQuality;
+  const outputDir = q.options.outputDir ?? settings.defaultOutputDir;
+  const setFormat = (v: ImageFormat) => q.setOptions({ format: v });
+  const setQuality = (v: number) => q.setOptions({ quality: v });
+  const setOutputDir = (v: string) => q.setOptions({ outputDir: v });
   const [dragging, setDragging] = useState(false);
 
   useEffect(() => {
