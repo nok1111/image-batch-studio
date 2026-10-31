@@ -431,6 +431,48 @@ pub fn avif_dimensions(data: &[u8]) -> Option<(u32, u32)> {
     Some((field(8)?, field(12)?))
 }
 
+/// Largest file [`display_bytes`] will load for an on-screen comparison.
+pub const MAX_DISPLAY_BYTES: u64 = 256 * 1024 * 1024;
+
+/// Bytes a webview can show for `path`. Formats browsers render natively are
+/// returned untouched (so the viewer sees the exact encoded result); TIFF and
+/// ICO are decoded and re-encoded losslessly as PNG.
+pub fn display_bytes(path: &Path) -> Result<Vec<u8>, FileError> {
+    let ext = path
+        .extension()
+        .and_then(|e| e.to_str())
+        .map(str::to_ascii_lowercase)
+        .unwrap_or_default();
+    let native = matches!(
+        ext.as_str(),
+        "png" | "jpg" | "jpeg" | "jpe" | "jfif" | "webp" | "gif" | "bmp" | "avif"
+    );
+    let reencode = matches!(ext.as_str(), "tif" | "tiff" | "ico");
+    if !native && !reencode {
+        return Err(FileError::new(
+            FileErrorCode::Unsupported,
+            format!("not an image file: {}", path.display()),
+        ));
+    }
+    let len = std::fs::metadata(path).map_err(FileError::io)?.len();
+    if len > MAX_DISPLAY_BYTES {
+        return Err(FileError::new(
+            FileErrorCode::TooLarge,
+            format!("{} is too large to preview", path.display()),
+        ));
+    }
+    if native {
+        return std::fs::read(path).map_err(FileError::io);
+    }
+    let decoded = decode(path)?;
+    let mut out = std::io::Cursor::new(Vec::new());
+    decoded
+        .image
+        .write_to(&mut out, image::ImageFormat::Png)
+        .map_err(|e| FileError::new(FileErrorCode::Encode, e.to_string()))?;
+    Ok(out.into_inner())
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

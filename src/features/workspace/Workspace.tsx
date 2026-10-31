@@ -11,6 +11,7 @@ import { errorMessage, ipc, type PlannedOutput } from "@/lib/ipc";
 import { cn } from "@/lib/utils";
 import { useQueueStore } from "@/stores/queue";
 import { useSettingsStore } from "@/stores/settings";
+import { CompareDialog } from "./CompareDialog";
 import { FileList } from "./FileList";
 import { buildJob, resolveOptions, savings } from "./job";
 import { CompressorPanel, ConverterPanel, RenamerPanel, ResizerPanel } from "./OptionPanels";
@@ -38,6 +39,8 @@ export function Workspace({ module }: { module: ModuleId }) {
   const [dragging, setDragging] = useState(false);
   const Panel = PANELS[module as WorkspaceModule];
   const [previews, setPreviews] = useState<PlannedOutput[] | null>(null);
+  const [compare, setCompare] = useState<string | null>(null);
+  const compared = compare !== null ? q.items.find((i) => i.path === compare && i.status === "done" && i.output) : undefined;
   const [previewError, setPreviewError] = useState<string | null>(null);
 
   const previewKey =
@@ -153,7 +156,7 @@ export function Workspace({ module }: { module: ModuleId }) {
             <p className="text-xs text-text-secondary">{t("workspace.dropHint")}</p>
           </div>
         ) : (
-          <FileList items={q.items} running={q.running} onRemove={q.removeItem} previews={module === "renamer" ? (previews ?? []) : undefined} renamed={q.lastMode === "copyOriginal"} />
+          <FileList items={q.items} running={q.running} onRemove={q.removeItem} previews={module === "renamer" ? (previews ?? []) : undefined} renamed={q.lastMode === "copyOriginal"} onCompare={module === "renamer" ? undefined : (i) => setCompare(q.items[i]?.path ?? null)} />
         )}
         {dragging && (
           <div className="pointer-events-none absolute inset-0 flex items-center justify-center bg-accent/10 text-sm font-medium text-accent">
@@ -227,6 +230,7 @@ export function Workspace({ module }: { module: ModuleId }) {
           )}
         </p>
       )}
+      {compared && <CompareDialog item={compared} onClose={() => setCompare(null)} />}
     </div>
   );
 }

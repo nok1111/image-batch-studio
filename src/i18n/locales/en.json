@@ -205,5 +205,18 @@
     "previewError": "Cannot preview: {{message}}",
     "saved": "Saved {{percent}} ({{before}} → {{after}})",
     "grew": "{{percent}} larger ({{before}} → {{after}})"
+  },
+  "compare": {
+    "open": "Compare {{name}} before and after",
+    "title": "Before / after",
+    "original": "Original",
+    "result": "Result",
+    "fit": "Fit",
+    "actual": "100 %",
+    "close": "Close",
+    "loading": "Loading…",
+    "unavailable": "This format can't be shown here.",
+    "split": "Comparison divider",
+    "hint": "Drag over the image to move the divider."
   }
 }

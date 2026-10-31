@@ -65,6 +65,7 @@ export const ipc = {
   },
   cancelJob: () => invoke<boolean>("cancel_job"),
   previewJob: (job: Job) => invoke<PlannedOutput[]>("preview_job", { job }),
+  loadImage: (path: string) => invoke<ArrayBuffer>("load_image", { path }),
   listResizePresets: () => invoke<ResizePreset[]>("list_resize_presets"),
   saveResizePreset: (preset: ResizePreset) => invoke<ResizePreset>("save_resize_preset", { preset }),
   deleteResizePreset: (id: number) => invoke<void>("delete_resize_preset", { id }),

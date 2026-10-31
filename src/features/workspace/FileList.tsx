@@ -1,7 +1,7 @@
 import { useRef } from "react";
 import { useTranslation } from "react-i18next";
 import { useVirtualizer } from "@tanstack/react-virtual";
-import { X } from "lucide-react";
+import { Columns2, X } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { formatBytes } from "@/lib/format";
 import type { PlannedOutput } from "@/lib/ipc";
@@ -21,7 +21,7 @@ const STATUS_VARIANT = {
 } as const;
 
 /** Virtualized so batches of tens of thousands of files stay smooth. */
-export function FileList({ items, running, onRemove, previews, renamed = false }: { items: QueueItem[]; running: boolean; onRemove: (i: number) => void; previews?: PlannedOutput[] | null; renamed?: boolean }) {
+export function FileList({ items, running, onRemove, previews, renamed = false, onCompare }: { items: QueueItem[]; running: boolean; onRemove: (i: number) => void; previews?: PlannedOutput[] | null; renamed?: boolean; onCompare?: (i: number) => void }) {
   const { t } = useTranslation();
   const parentRef = useRef<HTMLDivElement>(null);
   const virtualizer = useVirtualizer({
@@ -85,6 +85,21 @@ export function FileList({ items, running, onRemove, previews, renamed = false }
                 >
                   {warnings}
                 </span>
+              )}
+              {onCompare && (
+                <button
+                  type="button"
+                  onClick={() => onCompare(row.index)}
+                  aria-label={t("compare.open", { name: item.name })}
+                  title={t("compare.open", { name: item.name })}
+                  className={cn(
+                    "shrink-0 rounded p-1 text-text-secondary hover:bg-card hover:text-text cursor-pointer",
+                    !(item.status === "done" && item.output) && "invisible",
+                  )}
+                  disabled={!(item.status === "done" && item.output)}
+                >
+                  <Columns2 className="size-3.5" />
+                </button>
               )}
               <button
                 type="button"

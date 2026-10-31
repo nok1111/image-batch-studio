@@ -205,5 +205,18 @@
     "previewError": "Não é possível pré-visualizar: {{message}}",
     "saved": "Economia de {{percent}} ({{before}} → {{after}})",
     "grew": "{{percent}} maior ({{before}} → {{after}})"
+  },
+  "compare": {
+    "open": "Comparar antes e depois de {{name}}",
+    "title": "Antes / depois",
+    "original": "Original",
+    "result": "Resultado",
+    "fit": "Ajustar",
+    "actual": "100 %",
+    "close": "Fechar",
+    "loading": "Carregando…",
+    "unavailable": "Este formato não pode ser exibido aqui.",
+    "split": "Divisor da comparação",
+    "hint": "Arraste sobre a imagem para mover o divisor."
   }
 }

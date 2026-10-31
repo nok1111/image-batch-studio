@@ -35,6 +35,24 @@ pub async fn preview_job(job: Job) -> CommandResult<Vec<PlannedOutput>> {
         .map_err(Into::into)
 }
 
+/// Raw bytes of an image for the before/after comparison view.
+#[tauri::command]
+pub async fn load_image(path: String) -> CommandResult<tauri::ipc::Response> {
+    let bytes = tauri::async_runtime::spawn_blocking(move || {
+        ibs_core::codec::display_bytes(std::path::Path::new(&path))
+    })
+    .await
+    .map_err(|e| CommandError {
+        code: "internal",
+        message: e.to_string(),
+    })?
+    .map_err(|e| CommandError {
+        code: "image",
+        message: e.message,
+    })?;
+    Ok(tauri::ipc::Response::new(bytes))
+}
+
 /// Starts a batch in the background and streams `JobEvent`s on `on_event`.
 #[tauri::command]
 pub fn start_job(
