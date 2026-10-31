@@ -24,7 +24,7 @@ describe("queue store", () => {
   beforeEach(() => {
     invoke.mockReset();
     useQueueStore.getState().clear();
-    useQueueStore.setState({ running: false });
+    useQueueStore.setState({ running: false, lastOutputDir: null });
     useQueueStore.getState().clear();
   });
 
