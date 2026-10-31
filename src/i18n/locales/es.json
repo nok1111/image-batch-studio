@@ -145,6 +145,9 @@
       "wouldOverwriteSource": "Sobrescribiría el original",
       "outputUnsupported": "Formato no posible para esta imagen",
       "internal": "Error inesperado"
+    },
+    "warnings": {
+      "firstFrameOnly": "Animada: solo el primer fotograma"
     }
   }
 }

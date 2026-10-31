@@ -19,6 +19,7 @@ pub fn run() {
             app.manage(AppState {
                 store,
                 running_job: Default::default(),
+                last_output_dir: Default::default(),
             });
             Ok(())
         })

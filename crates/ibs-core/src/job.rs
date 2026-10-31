@@ -24,6 +24,15 @@ pub struct Job {
     pub output: OutputSpec,
 }
 
+/// Non-fatal notice attached to a successful result.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, TS)]
+#[serde(rename_all = "camelCase")]
+#[ts(export)]
+pub enum FileWarning {
+    /// Animated input: only the first frame was exported.
+    FirstFrameOnly,
+}
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, TS)]
 #[serde(rename_all = "camelCase")]
 #[ts(export)]
@@ -46,4 +55,5 @@ pub struct FileResult {
     #[ts(type = "number | null")]
     pub output_size: Option<u64>,
     pub error: Option<FileError>,
+    pub warning: Option<FileWarning>,
 }

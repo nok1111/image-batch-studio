@@ -23,8 +23,14 @@ fn limits() -> Limits {
     l
 }
 
+pub struct Decoded {
+    pub image: DynamicImage,
+    /// Multi-frame input of which only the first frame was decoded.
+    pub animated: bool,
+}
+
 /// Decodes by content (not extension), with dimension and memory limits.
-pub fn decode(path: &Path) -> Result<DynamicImage, FileError> {
+pub fn decode(path: &Path) -> Result<Decoded, FileError> {
     let mut reader = ImageReader::open(path)
         .map_err(FileError::io)?
         .with_guessed_format()
@@ -35,8 +41,25 @@ pub fn decode(path: &Path) -> Result<DynamicImage, FileError> {
             "not a recognized image file",
         ));
     }
+    let is_gif = reader.format() == Some(image::ImageFormat::Gif);
     reader.limits(limits());
-    reader.decode().map_err(map_decode_error)
+    let image = reader.decode().map_err(map_decode_error)?;
+    let animated = is_gif && is_animated_gif(path);
+    Ok(Decoded { image, animated })
+}
+
+fn is_animated_gif(path: &Path) -> bool {
+    use image::{AnimationDecoder, ImageDecoder};
+    let Ok(file) = std::fs::File::open(path) else {
+        return false;
+    };
+    let Ok(mut decoder) = image::codecs::gif::GifDecoder::new(std::io::BufReader::new(file)) else {
+        return false;
+    };
+    if decoder.set_limits(limits()).is_err() {
+        return false;
+    }
+    decoder.into_frames().take(2).filter(Result::is_ok).count() > 1
 }
 
 fn map_decode_error(e: ImageError) -> FileError {
@@ -134,12 +157,14 @@ pub fn verify(path: &Path, width: u32, height: u32) -> Result<(), FileError> {
             "output file is empty",
         ));
     }
-    let img = decode(path).map_err(|e| {
-        FileError::new(
-            FileErrorCode::Verify,
-            format!("output does not decode: {e}"),
-        )
-    })?;
+    let img = decode(path)
+        .map_err(|e| {
+            FileError::new(
+                FileErrorCode::Verify,
+                format!("output does not decode: {e}"),
+            )
+        })?
+        .image;
     if (img.width(), img.height()) != (width, height) {
         return Err(FileError::new(
             FileErrorCode::Verify,

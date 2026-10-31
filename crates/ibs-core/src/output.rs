@@ -4,7 +4,6 @@ use crate::{ConflictPolicy, FileError, FileErrorCode, ImageFormat};
 use std::collections::HashSet;
 use std::path::{Path, PathBuf};
 use std::sync::Mutex;
-use std::time::{Duration, SystemTime};
 
 /// Prefix of in-progress output files (hidden, ignored by input scans).
 pub const TEMP_PREFIX: &str = ".ibs-tmp-";
@@ -60,8 +59,8 @@ impl Planner {
             .map_err(|_| FileError::new(FileErrorCode::Internal, "planner lock poisoned"))?;
         let mut candidate = self.dir.join(format!("{stem}.{}", self.ext));
         for n in 1..=MAX_RENAME_ATTEMPTS {
-            let key = identity(&candidate);
-            let is_source = self.sources.contains(&key);
+            let key = claim_key(&candidate);
+            let is_source = self.sources.contains(&identity(&candidate));
             let exists = std::fs::symlink_metadata(&candidate).is_ok();
             if !claimed.contains(&key) {
                 if !is_source && !exists {
@@ -104,6 +103,20 @@ impl Planner {
     }
 }
 
+/// Batch reservation key. Lexical (the output dir is canonical) so it stays
+/// stable when an existing target, e.g. a symlink, is replaced mid-batch.
+fn claim_key(p: &Path) -> PathBuf {
+    fold_case(p.to_path_buf())
+}
+
+fn fold_case(p: PathBuf) -> PathBuf {
+    if cfg!(any(windows, target_os = "macos")) {
+        PathBuf::from(p.to_string_lossy().to_lowercase())
+    } else {
+        p
+    }
+}
+
 /// Comparable identity of a path: canonical when it exists, otherwise the
 /// canonical parent plus file name; case-insensitive on Windows and macOS.
 fn identity(p: &Path) -> PathBuf {
@@ -116,34 +129,7 @@ fn identity(p: &Path) -> PathBuf {
             _ => p.to_path_buf(),
         }
     });
-    if cfg!(any(windows, target_os = "macos")) {
-        PathBuf::from(resolved.to_string_lossy().to_lowercase())
-    } else {
-        resolved
-    }
-}
-
-/// Removes temp files left behind by a crash (older than `max_age`).
-pub fn cleanup_stale_temps(dir: &Path, max_age: Duration) {
-    let Ok(entries) = std::fs::read_dir(dir) else {
-        return;
-    };
-    let now = SystemTime::now();
-    for entry in entries.flatten() {
-        let is_temp = entry
-            .file_name()
-            .to_str()
-            .is_some_and(|n| n.starts_with(TEMP_PREFIX));
-        let old = entry
-            .metadata()
-            .and_then(|m| m.modified())
-            .ok()
-            .and_then(|t| now.duration_since(t).ok())
-            .is_some_and(|age| age >= max_age);
-        if is_temp && old {
-            let _ = std::fs::remove_file(entry.path());
-        }
-    }
+    fold_case(resolved)
 }
 
 #[cfg(test)]
@@ -264,17 +250,33 @@ mod tests {
         );
     }
 
+    #[cfg(unix)]
     #[test]
-    fn cleanup_removes_only_old_temp_files() {
-        let d = tempfile::tempdir().unwrap();
-        let tmp = d.path().join(format!("{TEMP_PREFIX}x.png"));
-        let keep = d.path().join("keep.png");
-        std::fs::write(&tmp, b"").unwrap();
-        std::fs::write(&keep, b"").unwrap();
-        cleanup_stale_temps(d.path(), Duration::from_secs(3600));
-        assert!(tmp.exists());
-        cleanup_stale_temps(d.path(), Duration::ZERO);
-        assert!(!tmp.exists());
-        assert!(keep.exists());
+    fn claims_survive_replacing_a_symlinked_target() {
+        let (d, _) = setup();
+        let out = d.path().join("out");
+        std::fs::create_dir(&out).unwrap();
+        std::fs::write(out.join("old.jpg"), b"old").unwrap();
+        std::os::unix::fs::symlink(out.join("old.jpg"), out.join("a.jpg")).unwrap();
+        let inputs = [d.path().join("a.png"), d.path().join("a.bmp")];
+        let p = Planner::new(&out, ImageFormat::Jpeg, ConflictPolicy::Overwrite, &inputs);
+        let first = p.plan(&inputs[0]).unwrap();
+        assert_eq!(
+            first,
+            Plan::Write {
+                target: out.join("a.jpg"),
+                replace: true
+            }
+        );
+        std::fs::remove_file(out.join("a.jpg")).unwrap();
+        std::fs::write(out.join("a.jpg"), b"new").unwrap();
+        let second = p.plan(&inputs[1]).unwrap();
+        assert_eq!(
+            second,
+            Plan::Write {
+                target: out.join("a (1).jpg"),
+                replace: false
+            }
+        );
     }
 }

@@ -32,7 +32,7 @@ pub fn start_job(
     on_event: Channel<JobEvent>,
 ) -> CommandResult<()> {
     let concurrency = state.store.settings()?.concurrency as usize;
-    ibs_core::engine::prepare(&job)?;
+    let output_dir = ibs_core::engine::prepare(&job)?;
     let cancel = Arc::new(AtomicBool::new(false));
     {
         let mut slot = state.running_job.lock().map_err(|_| poisoned())?;
@@ -43,6 +43,9 @@ pub fn start_job(
             });
         }
         *slot = Some(cancel.clone());
+    }
+    if let Ok(mut last) = state.last_output_dir.lock() {
+        *last = Some(output_dir);
     }
     let spawned = std::thread::Builder::new()
         .name("ibs-job".into())

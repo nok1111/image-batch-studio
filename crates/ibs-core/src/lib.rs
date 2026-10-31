@@ -14,4 +14,4 @@ pub use engine::{run, JobError, JobEvent, JobSummary};
 pub use error::{FileError, FileErrorCode};
 pub use format::{ConflictPolicy, ImageFormat};
 pub use intake::{scan, InputFile, ScanResult};
-pub use job::{FileResult, FileStatus, Job, OutputSpec};
+pub use job::{FileResult, FileStatus, FileWarning, Job, OutputSpec};

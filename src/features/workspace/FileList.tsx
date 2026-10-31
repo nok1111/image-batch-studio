@@ -51,9 +51,15 @@ export function FileList({ items, running, onRemove }: { items: QueueItem[]; run
               <span className="flex w-28 shrink-0 justify-end" title={item.error?.message ?? item.output ?? undefined}>
                 <Badge variant={STATUS_VARIANT[item.status]}>{statusLabel}</Badge>
               </span>
-              <span className="w-40 shrink-0 truncate text-xs text-danger" title={item.error?.message}>
-                {item.error ? t(`workspace.errors.${item.error.code}`) : ""}
-              </span>
+              {item.error ? (
+                <span className="w-40 shrink-0 truncate text-xs text-danger" title={item.error.message}>
+                  {t(`workspace.errors.${item.error.code}`)}
+                </span>
+              ) : (
+                <span className="w-40 shrink-0 truncate text-xs text-warning">
+                  {item.warning ? t(`workspace.warnings.${item.warning}`) : ""}
+                </span>
+              )}
               <button
                 type="button"
                 disabled={running}

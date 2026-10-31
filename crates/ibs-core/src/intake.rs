@@ -48,10 +48,16 @@ pub fn scan(paths: &[PathBuf], cancel: &AtomicBool) -> ScanResult {
                 out.truncated = true;
                 break 'roots;
             }
-            if !entry.file_type().is_file() {
-                continue;
-            }
             let path = entry.path();
+            // Links to files are accepted; links to folders are not traversed.
+            let meta = if entry.file_type().is_file() {
+                entry.metadata().ok()
+            } else if entry.file_type().is_symlink() {
+                std::fs::metadata(path).ok().filter(|m| m.is_file())
+            } else {
+                continue;
+            };
+            let Some(meta) = meta else { continue };
             let Some(format) = ImageFormat::from_input_path(path) else {
                 out.unsupported += 1;
                 continue;
@@ -60,7 +66,7 @@ pub fn scan(paths: &[PathBuf], cancel: &AtomicBool) -> ScanResult {
             if !seen.insert(key) {
                 continue;
             }
-            let size = entry.metadata().map(|m| m.len()).unwrap_or(0);
+            let size = meta.len();
             out.files.push(InputFile {
                 path: path.to_string_lossy().into_owned(),
                 name: entry.file_name().to_string_lossy().into_owned(),

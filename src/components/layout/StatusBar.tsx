@@ -8,7 +8,8 @@ import { ipc } from "@/lib/ipc";
 export function StatusBar() {
   const { t } = useTranslation();
   const q = useQueueStore();
-  const outputDir = useSettingsStore((s) => s.settings?.defaultOutputDir ?? null);
+  const defaultDir = useSettingsStore((s) => s.settings?.defaultOutputDir ?? null);
+  const outputDir = q.lastOutputDir ?? defaultDir;
 
   return (
     <footer className="flex h-9 shrink-0 items-center gap-5 border-t border-border bg-bg-secondary px-4 text-xs text-text-secondary">

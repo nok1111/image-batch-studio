@@ -145,6 +145,9 @@
       "wouldOverwriteSource": "Would overwrite the original",
       "outputUnsupported": "Format not possible for this image",
       "internal": "Unexpected error"
+    },
+    "warnings": {
+      "firstFrameOnly": "Animated: first frame only"
     }
   }
 }

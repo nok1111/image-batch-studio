@@ -369,3 +369,67 @@ fn invalid_jobs_are_rejected_before_starting() {
     j.output.quality = 50;
     assert!(run(&j, 1, &cancel, |_| {}).is_err());
 }
+
+#[test]
+fn animated_gif_is_flagged_as_first_frame_only() {
+    use image::codecs::gif::GifEncoder;
+    use image::{Delay, Frame};
+    let d = tempfile::tempdir().unwrap();
+    let anim = d.path().join("anim.gif");
+    let still = d.path().join("still.gif");
+    {
+        let mut enc = GifEncoder::new(std::fs::File::create(&anim).unwrap());
+        let frames = (0..3u8).map(|i| {
+            Frame::from_parts(
+                RgbaImage::from_pixel(8, 8, Rgba([i * 80, 0, 0, 255])),
+                0,
+                0,
+                Delay::from_numer_denom_ms(100, 1),
+            )
+        });
+        enc.encode_frames(frames).unwrap();
+    }
+    image::DynamicImage::ImageRgba8(RgbaImage::from_pixel(8, 8, Rgba([1, 2, 3, 255])))
+        .save(&still)
+        .unwrap();
+    let out = d.path().join("out");
+    let r = run_collect(
+        &job(
+            &[anim, still],
+            &out,
+            ImageFormat::Png,
+            ConflictPolicy::Rename,
+        ),
+        &AtomicBool::new(false),
+    );
+    assert_eq!(r[0].status, FileStatus::Done);
+    assert_eq!(r[0].warning, Some(ibs_core::FileWarning::FirstFrameOnly));
+    assert_eq!(r[1].warning, None);
+}
+
+#[cfg(unix)]
+#[test]
+fn scan_accepts_file_symlinks_but_not_folder_symlinks() {
+    let d = tempfile::tempdir().unwrap();
+    let real = d.path().join("real");
+    std::fs::create_dir(&real).unwrap();
+    write_png(&real.join("a.png"), 4, 4);
+    let picked = d.path().join("picked");
+    std::fs::create_dir(&picked).unwrap();
+    std::os::unix::fs::symlink(real.join("a.png"), picked.join("link.png")).unwrap();
+    std::os::unix::fs::symlink(&real, picked.join("linked-dir")).unwrap();
+    let cancel = AtomicBool::new(false);
+
+    let r = ibs_core::scan(&[picked.join("link.png")], &cancel);
+    assert_eq!(r.files.len(), 1);
+    assert!(r.files[0].size > 0);
+
+    let r = ibs_core::scan(std::slice::from_ref(&picked), &cancel);
+    assert_eq!(
+        r.files.iter().map(|f| f.name.as_str()).collect::<Vec<_>>(),
+        ["link.png"]
+    );
+
+    let r = ibs_core::scan(&[picked, real], &cancel);
+    assert_eq!(r.files.len(), 1, "link and target are the same file");
+}

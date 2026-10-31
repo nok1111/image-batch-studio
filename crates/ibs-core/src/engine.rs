@@ -2,18 +2,16 @@
 //! cancellation, write-to-temp → verify → atomic rename.
 
 use crate::codec;
-use crate::output::{cleanup_stale_temps, Plan, Planner, TEMP_PREFIX};
-use crate::{FileError, FileErrorCode, FileResult, FileStatus, ImageFormat, Job};
+use crate::output::{Plan, Planner, TEMP_PREFIX};
+use crate::{FileError, FileErrorCode, FileResult, FileStatus, FileWarning, ImageFormat, Job};
 use rayon::prelude::*;
 use serde::Serialize;
 use std::io::{BufWriter, Write};
 use std::panic::{catch_unwind, AssertUnwindSafe};
 use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicBool, AtomicU32, Ordering};
-use std::time::{Duration, Instant};
+use std::time::Instant;
 use ts_rs::TS;
-
-const STALE_TEMP_AGE: Duration = Duration::from_secs(3600);
 
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Serialize, TS)]
 #[serde(rename_all = "camelCase")]
@@ -86,7 +84,6 @@ where
 {
     let started = Instant::now();
     let dir = prepare(job)?;
-    cleanup_stale_temps(&dir, STALE_TEMP_AGE);
     let inputs: Vec<PathBuf> = job.inputs.iter().map(PathBuf::from).collect();
     let planner = Planner::new(&dir, job.output.format, job.output.conflict, &inputs);
     let threads = match concurrency {
@@ -148,6 +145,7 @@ fn cancelled(index: u32) -> FileResult {
         output: None,
         output_size: None,
         error: None,
+        warning: None,
     }
 }
 
@@ -158,6 +156,7 @@ fn failed(index: u32, error: FileError) -> FileResult {
         output: None,
         output_size: None,
         error: Some(error),
+        warning: None,
     }
 }
 
@@ -170,12 +169,13 @@ fn process(
     cancel: &AtomicBool,
 ) -> FileResult {
     match write_one(input, job, dir, planner, cancel) {
-        Ok(Some((target, size))) => FileResult {
+        Ok(Some(w)) => FileResult {
             index,
             status: FileStatus::Done,
-            output: Some(target.to_string_lossy().into_owned()),
-            output_size: Some(size),
+            output: Some(w.target.to_string_lossy().into_owned()),
+            output_size: Some(w.size),
             error: None,
+            warning: w.warning,
         },
         Ok(None) => cancelled(index),
         Err(Outcome::Skipped(target)) => FileResult {
@@ -184,9 +184,16 @@ fn process(
             output: Some(target.to_string_lossy().into_owned()),
             output_size: None,
             error: None,
+            warning: None,
         },
         Err(Outcome::Failed(e)) => failed(index, e),
     }
+}
+
+struct Written {
+    target: PathBuf,
+    size: u64,
+    warning: Option<FileWarning>,
 }
 
 enum Outcome {
@@ -207,9 +214,10 @@ fn write_one(
     dir: &Path,
     planner: &Planner,
     cancel: &AtomicBool,
-) -> Result<Option<(PathBuf, u64)>, Outcome> {
+) -> Result<Option<Written>, Outcome> {
     let spec = &job.output;
-    let img = codec::decode(input)?;
+    let decoded = codec::decode(input)?;
+    let img = decoded.image;
     codec::check_encodable(spec.format, img.width(), img.height())?;
     if cancel.load(Ordering::Relaxed) {
         return Ok(None);
@@ -243,5 +251,10 @@ fn write_one(
     };
     let file = persisted.map_err(|e| FileError::io(e.error))?;
     let size = file.metadata().map_err(FileError::io)?.len();
-    Ok(Some((target, size)))
+    let warning = decoded.animated.then_some(FileWarning::FirstFrameOnly);
+    Ok(Some(Written {
+        target,
+        size,
+        warning,
+    }))
 }

@@ -1,5 +1,5 @@
 import { create } from "zustand";
-import { errorMessage, ipc, type FileError, type FileStatus, type JobEvent, type JobSummary, type OutputSpec } from "@/lib/ipc";
+import { errorMessage, ipc, type FileError, type FileStatus, type FileWarning, type JobEvent, type JobSummary, type OutputSpec } from "@/lib/ipc";
 
 export type ItemStatus = "pending" | FileStatus;
 
@@ -11,6 +11,7 @@ export interface QueueItem {
   output: string | null;
   outputSize: number | null;
   error: FileError | null;
+  warning: FileWarning | null;
 }
 
 /** Aggregated batch progress shown in the status bar. */
@@ -43,6 +44,8 @@ interface QueueState extends QueueStats {
   cancelling: boolean;
   bytesTotal: number;
   bytesDone: number;
+  /** Output folder of the latest batch, for the status bar. */
+  lastOutputDir: string | null;
   addPaths: (paths: string[]) => Promise<void>;
   removeItem: (index: number) => void;
   clear: () => void;
@@ -61,6 +64,7 @@ export const useQueueStore = create<QueueState>((set, get) => ({
   scanNotice: null,
   error: null,
   bytesTotal: 0,
+  lastOutputDir: null,
 
   addPaths: async (paths) => {
     if (paths.length === 0 || get().running) return;
@@ -72,7 +76,7 @@ export const useQueueStore = create<QueueState>((set, get) => ({
       for (const f of scan.files) {
         if (known.has(f.path)) continue;
         known.add(f.path);
-        fresh.push({ path: f.path, name: f.name, size: f.size, status: "pending", output: null, outputSize: null, error: null });
+        fresh.push({ path: f.path, name: f.name, size: f.size, status: "pending", output: null, outputSize: null, error: null, warning: null });
       }
       const items = [...get().items, ...fresh];
       set({
@@ -110,8 +114,9 @@ export const useQueueStore = create<QueueState>((set, get) => ({
       ...idle,
       running: true,
       startedAt: Date.now(),
+      lastOutputDir: output.dir,
       error: null,
-      items: items.map((i) => ({ ...i, status: "pending", output: null, outputSize: null, error: null })),
+      items: items.map((i) => ({ ...i, status: "pending", output: null, outputSize: null, error: null, warning: null })),
     });
     try {
       await ipc.startJob({ inputs: items.map((i) => i.path), output }, (ev) => get().applyEvent(ev));
@@ -145,7 +150,7 @@ export const useQueueStore = create<QueueState>((set, get) => ({
     for (const r of event.results) {
       const item = items[r.index];
       if (!item) continue;
-      items[r.index] = { ...item, status: r.status, output: r.output, outputSize: r.outputSize, error: r.error };
+      items[r.index] = { ...item, status: r.status, output: r.output, outputSize: r.outputSize, error: r.error, warning: r.warning };
       if (r.status === "done" || r.status === "skipped") completed++;
       if (r.status === "failed") failed++;
       bytesDone += item.size;

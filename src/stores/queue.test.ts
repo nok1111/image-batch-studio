@@ -54,8 +54,8 @@ describe("queue store", () => {
     const progress: JobEvent = {
       type: "progress",
       results: [
-        { index: 0, status: "done", output: "/out/a.jpg", outputSize: 50, error: null },
-        { index: 2, status: "failed", output: null, outputSize: null, error: { code: "decode", message: "bad" } },
+        { index: 0, status: "done", output: "/out/a.jpg", outputSize: 50, error: null, warning: "firstFrameOnly" },
+        { index: 2, status: "failed", output: null, outputSize: null, error: { code: "decode", message: "bad" }, warning: null },
       ],
     };
     useQueueStore.getState().applyEvent(progress, startedAt + 2000);
@@ -63,6 +63,8 @@ describe("queue store", () => {
     expect(s.completed).toBe(1);
     expect(s.failed).toBe(1);
     expect(s.items[2]?.status).toBe("failed");
+    expect(s.items[0]?.warning).toBe("firstFrameOnly");
+    expect(s.lastOutputDir).toBe("/out");
     expect(s.items[1]?.status).toBe("pending");
     expect(s.speed).toBeCloseTo(1);
     // 200 of 400 bytes in 2 s → 2 s remaining

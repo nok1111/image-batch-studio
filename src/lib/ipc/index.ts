@@ -13,6 +13,7 @@ export type { FileError } from "./bindings/FileError";
 export type { FileErrorCode } from "./bindings/FileErrorCode";
 export type { FileResult } from "./bindings/FileResult";
 export type { FileStatus } from "./bindings/FileStatus";
+export type { FileWarning } from "./bindings/FileWarning";
 export type { InputFile } from "./bindings/InputFile";
 export type { Job } from "./bindings/Job";
 export type { JobEvent } from "./bindings/JobEvent";
