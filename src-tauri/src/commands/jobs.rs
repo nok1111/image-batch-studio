@@ -1,6 +1,6 @@
 use crate::error::{CommandError, CommandResult};
 use crate::state::AppState;
-use ibs_core::{FileResult, Job, JobEvent, PlannedOutput, ScanResult};
+use ibs_core::{FileResult, FileStatus, Job, JobEvent, PlannedOutput, ScanResult};
 use std::path::PathBuf;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{mpsc, Arc};
@@ -37,7 +37,21 @@ pub async fn preview_job(job: Job) -> CommandResult<Vec<PlannedOutput>> {
 
 /// Raw bytes of an image for the before/after comparison view.
 #[tauri::command]
-pub async fn load_image(path: String) -> CommandResult<tauri::ipc::Response> {
+pub async fn load_image(
+    state: State<'_, AppState>,
+    path: String,
+) -> CommandResult<tauri::ipc::Response> {
+    let allowed = state
+        .viewable
+        .lock()
+        .map_err(|_| poisoned())?
+        .contains(std::path::Path::new(&path));
+    if !allowed {
+        return Err(CommandError {
+            code: "image",
+            message: "not part of the latest batch".into(),
+        });
+    }
     let bytes = tauri::async_runtime::spawn_blocking(move || {
         ibs_core::codec::display_bytes(std::path::Path::new(&path))
     })
@@ -77,6 +91,9 @@ pub fn start_job(
     if let Ok(mut last) = state.last_output_dir.lock() {
         *last = Some(output_dir);
     }
+    if let Ok(mut viewable) = state.viewable.lock() {
+        *viewable = job.inputs.iter().map(PathBuf::from).collect();
+    }
     let spawned = std::thread::Builder::new()
         .name("ibs-job".into())
         .spawn(move || {
@@ -86,6 +103,11 @@ pub fn start_job(
                 std::thread::spawn(move || forward_batched(rx, &channel))
             };
             let outcome = ibs_core::run(&job, concurrency, &cancel, |r| {
+                if let (FileStatus::Done, Some(out)) = (&r.status, &r.output) {
+                    if let Ok(mut viewable) = app.state::<AppState>().viewable.lock() {
+                        viewable.insert(PathBuf::from(out));
+                    }
+                }
                 let _ = tx.send(r);
             });
             drop(tx);

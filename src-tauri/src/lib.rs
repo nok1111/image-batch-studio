@@ -20,6 +20,7 @@ pub fn run() {
                 store,
                 running_job: Default::default(),
                 last_output_dir: Default::default(),
+                viewable: Default::default(),
             });
             Ok(())
         })
