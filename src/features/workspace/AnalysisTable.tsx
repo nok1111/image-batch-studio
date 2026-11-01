@@ -71,8 +71,18 @@ export function AnalysisTable({
                 className="absolute left-0 top-0 flex w-full items-center gap-3 border-b border-border/60 px-4 text-sm"
                 style={{ height: ROW_HEIGHT, transform: `translateY(${row.start}px)` }}
               >
-                <span className="min-w-0 flex-1 truncate text-text" title={item.path}>
+                <span
+                  className="min-w-0 flex-1 truncate text-text"
+                  title={
+                    item.error
+                      ? `${item.path}\n${t(`workspace.errors.${item.error.code}`)}\n${item.error.message}`
+                      : item.path
+                  }
+                >
                   {item.name}
+                  {item.error && (
+                    <span className="text-danger"> — {t(`workspace.errors.${item.error.code}`)}</span>
+                  )}
                 </span>
                 <span className="w-20 shrink-0 text-right text-xs tabular-nums text-text-secondary">
                   {a ? `${a.width}×${a.height}` : ""}
@@ -108,19 +118,11 @@ export function AnalysisTable({
                   {saving !== null ? `${saving >= 0 ? "−" : "+"}${Math.abs(saving).toFixed(0)}%` : ""}
                 </span>
                 <span className="flex w-20 shrink-0 items-center justify-end gap-1">
-                  <span
-                    title={
-                      item.error
-                        ? `${t(`workspace.errors.${item.error.code}`)}\n${item.error.message}`
-                        : undefined
-                    }
-                  >
-                    <Badge variant={STATUS_VARIANT[item.status]}>
-                      {item.status === "pending" && running
-                        ? t("workspace.status.queued")
-                        : t(`workspace.status.${item.status}`)}
-                    </Badge>
-                  </span>
+                  <Badge variant={STATUS_VARIANT[item.status]}>
+                    {item.status === "pending" && running
+                      ? t("workspace.status.queued")
+                      : t(`workspace.status.${item.status}`)}
+                  </Badge>
                   {!running && (
                     <button
                       type="button"
