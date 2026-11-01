@@ -18,20 +18,20 @@ pub async fn scan_inputs(
     paths: Vec<String>,
 ) -> CommandResult<ScanResult> {
     let paths: Vec<PathBuf> = paths.into_iter().map(PathBuf::from).collect();
-    // Any file the user picked may be shown (crop editor, comparison).
+    let scanned = tauri::async_runtime::spawn_blocking(move || {
+        ibs_core::scan(&paths, &AtomicBool::new(false))
+    })
+    .await
+    .map_err(|e| CommandError {
+        code: "internal",
+        message: e.to_string(),
+    })?;
+    // Only files the scan accepted as supported inputs may be shown
+    // (crop editor, comparison) — not arbitrary paths the caller passes.
     if let Ok(mut viewable) = state.viewable.lock() {
-        viewable.extend(paths.iter().cloned());
+        viewable.extend(scanned.files.iter().map(|f| PathBuf::from(&f.path)));
     }
-    // Any file the user picked may be shown (crop editor, comparison).
-    if let Ok(mut viewable) = state.viewable.lock() {
-        viewable.extend(paths.iter().cloned());
-    }
-    tauri::async_runtime::spawn_blocking(move || ibs_core::scan(&paths, &AtomicBool::new(false)))
-        .await
-        .map_err(|e| CommandError {
-            code: "internal",
-            message: e.to_string(),
-        })
+    Ok(scanned)
 }
 
 /// Output names a batch would produce (renamer preview, collision check).
