@@ -4,6 +4,7 @@
 use crate::codec::{self, EncodeOptions};
 use crate::gif;
 use crate::output::{Plan, Planner, TEMP_PREFIX};
+use crate::watermark::{self, Prepared as PreparedWatermark};
 use crate::{
     FileError, FileErrorCode, FileResult, FileStatus, FileWarning, ImageFormat, Job,
     MetadataPolicy, OutputMode,
@@ -98,6 +99,12 @@ fn validate(job: &Job) -> Result<(), JobError> {
             return Err(JobError::CopyWithResize);
         }
         t.validate().map_err(JobError::InvalidOptions)?;
+    }
+    if let Some(w) = &job.watermark {
+        if o.mode == OutputMode::CopyOriginal {
+            return Err(JobError::CopyWithResize);
+        }
+        w.validate().map_err(JobError::InvalidOptions)?;
     }
     if let Some(r) = &job.rename {
         r.validate().map_err(JobError::InvalidOptions)?;
@@ -261,6 +268,11 @@ where
         .build()
         .map_err(|e| JobError::Pool(e.to_string()))?;
 
+    let watermark = job
+        .watermark
+        .as_ref()
+        .map(|s| PreparedWatermark::load(s).map_err(|e| JobError::InvalidOptions(e.to_string())))
+        .transpose()?;
     let counts: [AtomicU32; 4] = Default::default();
     pool.install(|| {
         inputs
@@ -273,7 +285,7 @@ where
                     cancelled(index)
                 } else {
                     catch_unwind(AssertUnwindSafe(|| {
-                        process(index, input, plan, job, &dir, cancel)
+                        process(index, input, plan, job, &dir, &watermark, cancel)
                     }))
                     .unwrap_or_else(|_| {
                         failed(
@@ -335,6 +347,7 @@ fn process(
     plan: &Result<Plan, FileError>,
     job: &Job,
     dir: &Path,
+    watermark: &Option<PreparedWatermark>,
     cancel: &AtomicBool,
 ) -> FileResult {
     let (target, replace) = match plan {
@@ -347,7 +360,7 @@ fn process(
         }
         Err(e) => return failed(index, e.clone()),
     };
-    match write_one(input, job, dir, target, replace, cancel) {
+    match write_one(input, job, dir, target, replace, watermark, cancel) {
         Ok(Some(w)) => FileResult {
             output: Some(target.to_string_lossy().into_owned()),
             output_size: Some(w.size),
@@ -371,6 +384,7 @@ fn write_one(
     dir: &Path,
     target: &Path,
     replace: bool,
+    watermark: &Option<PreparedWatermark>,
     cancel: &AtomicBool,
 ) -> Result<Option<Written>, FileError> {
     let spec = &job.output;
@@ -410,6 +424,7 @@ fn write_one(
                 && spec.metadata == MetadataPolicy::Strip
                 && job.resize.is_none()
                 && job.transform.is_none()
+                && job.watermark.is_none()
             {
                 let bytes = std::fs::read(input).map_err(FileError::io)?;
                 if bytes.starts_with(b"GIF8") {
@@ -449,6 +464,9 @@ fn write_one(
             };
             if let Some(r) = &job.resize {
                 img = r.apply(&img);
+            }
+            if let Some(w) = watermark {
+                watermark::apply(job.watermark.as_ref().unwrap(), w, &mut img);
             }
             codec::check_encodable(format, img.width(), img.height())?;
             if cancel.load(Ordering::Relaxed) {

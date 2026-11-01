@@ -232,5 +232,28 @@
   },
   "meta": {
     "info": "Quita EXIF (cámara, GPS), XMP, perfil ICC y comentarios de todos los archivos. Los píxeles no se tocan."
+  },
+  "wm": {
+    "kind": "Marca de agua",
+    "kindText": "Texto",
+    "kindImage": "Logo",
+    "text": "Texto",
+    "textPlaceholder": "© Tu nombre",
+    "color": "Color",
+    "chooseImage": "Elegir imagen…",
+    "noImage": "Sin imagen elegida",
+    "scale": "Tamaño",
+    "opacity": "Opacidad",
+    "rotation": "Rotación",
+    "margin": "Margen",
+    "position": "Posición",
+    "custom": "Posición personalizada",
+    "customX": "X",
+    "customY": "Y",
+    "tiled": "Repetir en mosaico",
+    "spacing": "Separación del mosaico",
+    "preview": "Imagen de vista previa",
+    "previewHint": "Vista aproximada — el resultado final lo genera el motor.",
+    "previewError": "No se pudo cargar la imagen de vista previa"
   }
 }

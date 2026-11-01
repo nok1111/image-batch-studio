@@ -59,6 +59,7 @@ fn main() {
         },
         transform: None,
         resize: None,
+        watermark: None,
         rename: None,
     };
     let done = AtomicU32::new(0);

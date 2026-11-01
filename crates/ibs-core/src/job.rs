@@ -1,4 +1,5 @@
 use crate::transform::TransformSpec;
+use crate::watermark::WatermarkSpec;
 use crate::{ConflictPolicy, FileError, ImageFormat, RenameSpec, ResizeSpec};
 use serde::{Deserialize, Serialize};
 use ts_rs::TS;
@@ -55,6 +56,8 @@ pub struct Job {
     /// Crop / rotate / flip applied before resize.
     pub transform: Option<TransformSpec>,
     pub resize: Option<ResizeSpec>,
+    /// Watermark drawn last, after transform and resize.
+    pub watermark: Option<WatermarkSpec>,
     /// Output file names; without it outputs keep the input's name.
     pub rename: Option<RenameSpec>,
 }
