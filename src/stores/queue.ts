@@ -152,7 +152,6 @@ export const useQueueStore = create<QueueState>((set, get) => ({
       lastMode: null,
       startedAt: Date.now(),
       error: null,
-      lastOutputDir: null,
       items: items.map((i) => ({ ...i, status: "pending", output: null, outputSize: null, error: null, warnings: [], analysis: null })),
     });
     try {
