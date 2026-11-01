@@ -15,6 +15,14 @@ export type FormatChoice = ImageFormat | "source";
 export type CompressPreset =
   "maxQuality" | "balanced" | "high" | "web" | "custom";
 
+/** Pipeline steps the user can combine in one job (engine order). */
+export interface PipelineUse {
+  transform: boolean;
+  resize: boolean;
+  watermark: boolean;
+  rename: boolean;
+}
+
 /** Every option a tool module can set; each module uses a subset. */
 export interface ModuleOptions {
   format: FormatChoice;
@@ -30,6 +38,7 @@ export interface ModuleOptions {
   presetId: number | null;
   rename: RenameSpec;
   outputDir: string | null;
+  pipelineUse: PipelineUse;
 }
 
 export const COMPRESS_QUALITY: Record<
@@ -96,6 +105,12 @@ export function resolveOptions(
     watermark: DEFAULT_WATERMARK,
     rename: DEFAULT_RENAME,
     outputDir: settings.defaultOutputDir,
+    pipelineUse: {
+      transform: false,
+      resize: true,
+      watermark: true,
+      rename: false,
+    },
   };
   return { ...defaults, ...overrides };
 }
@@ -157,10 +172,23 @@ export function buildJob(
       targetSize: target,
       conflict: settings.conflictPolicy,
     },
-    resize: module === "resizer" ? o.resize : null,
-    transform: module === "cropRotate" ? o.transform : null,
-    watermark: module === "watermark" ? o.watermark : null,
-    rename: module === "renamer" ? o.rename : null,
+    resize:
+      module === "resizer" || (module === "pipeline" && o.pipelineUse.resize)
+        ? o.resize
+        : null,
+    transform:
+      module === "cropRotate" ||
+      (module === "pipeline" && o.pipelineUse.transform)
+        ? o.transform
+        : null,
+    watermark:
+      module === "watermark" || (module === "pipeline" && o.pipelineUse.watermark)
+        ? o.watermark
+        : null,
+    rename:
+      module === "renamer" || (module === "pipeline" && o.pipelineUse.rename)
+        ? o.rename
+        : null,
   };
 }
 

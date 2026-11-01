@@ -29,6 +29,7 @@ import {
   CropRotatePanel,
   WatermarkPanel,
   MetadataPanel,
+  PipelinePanel,
   RenamerPanel,
   ResizerPanel,
 } from "./OptionPanels";
@@ -56,6 +57,7 @@ const PANELS = {
   metadata: MetadataPanel,
   cropRotate: CropRotatePanel,
   watermark: WatermarkPanel,
+  pipeline: PipelinePanel,
 } as const;
 
 export type WorkspaceModule = keyof typeof PANELS;

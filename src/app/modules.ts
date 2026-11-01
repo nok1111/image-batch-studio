@@ -10,6 +10,7 @@ import {
   ShieldCheck,
   Stamp,
   TextCursorInput,
+  Workflow,
 } from "lucide-react";
 
 export type ModuleId =
@@ -20,7 +21,8 @@ export type ModuleId =
   | "renamer"
   | "metadata"
   | "cropRotate"
-  | "analyzer";
+  | "analyzer"
+  | "pipeline";
 
 export interface ToolModule {
   id: ModuleId;
@@ -88,6 +90,13 @@ export const TOOL_MODULES: ToolModule[] = [
     icon: ScanSearch,
     available: false,
     accent: "teal",
+  },
+  {
+    id: "pipeline",
+    path: "/pipeline",
+    icon: Workflow,
+    available: true,
+    accent: "accent",
   },
 ];
 

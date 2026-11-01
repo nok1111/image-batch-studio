@@ -1045,3 +1045,39 @@ export function WatermarkPanel({ o, set, disabled, items }: PanelProps) {
     </>
   );
 }
+
+/** Pipeline: the user stacks crop/rotate, resize, watermark and rename in one job. */
+export function PipelinePanel(props: PanelProps) {
+  const { t } = useTranslation();
+  const { o, set, disabled } = props;
+  const section = (
+    key: "transform" | "resize" | "watermark" | "rename",
+    content: React.ReactNode,
+  ) => (
+    <div className="flex basis-full flex-wrap items-center gap-x-6 gap-y-3 rounded-lg border border-border px-3 py-2">
+      <Check
+        label={t(`pipe.${key}`)}
+        checked={o.pipelineUse[key]}
+        onChange={(v) =>
+          set({ pipelineUse: { ...o.pipelineUse, [key]: v } })
+        }
+        disabled={disabled}
+      />
+      {o.pipelineUse[key] && (
+        <div className="flex basis-full flex-wrap items-end gap-x-6 gap-y-3">
+          {content}
+        </div>
+      )}
+    </div>
+  );
+  return (
+    <>
+      <FormatField {...props} formats={ALL_FORMATS} allowSource />
+      <CommonEncoding {...props} />
+      {section("transform", <CropRotatePanel {...props} />)}
+      {section("resize", <ResizerPanel {...props} />)}
+      {section("watermark", <WatermarkPanel {...props} />)}
+      {section("rename", <RenamerPanel {...props} />)}
+    </>
+  );
+}

@@ -13,7 +13,8 @@
     "metadata": "Metadata Cleaner",
     "cropRotate": "Crop & Rotate",
     "analyzer": "Image Analyzer",
-    "settings": "Settings"
+    "settings": "Settings",
+    "pipeline": "Pipeline"
   },
   "modules": {
     "converter": "Convert images between PNG, JPG, WebP, AVIF, BMP, TIFF, GIF and ICO.",
@@ -25,7 +26,8 @@
     "cropRotate": "Crop, rotate and flip images in batch.",
     "analyzer": "Inspect dimensions, formats, transparency and potential savings.",
     "unavailableTitle": "This module is not available yet",
-    "unavailableBody": "It is being built and will be enabled in an upcoming version."
+    "unavailableBody": "It is being built and will be enabled in an upcoming version.",
+    "pipeline": "Chain crop, resize, watermark, rename and conversion in one batch."
   },
   "dashboard": {
     "welcome": "Welcome to Image Batch Studio",
@@ -255,5 +257,11 @@
     "preview": "Preview image",
     "previewHint": "Approximate preview — the final result is rendered by the engine.",
     "previewError": "Could not load the preview image"
+  },
+  "pipe": {
+    "transform": "Crop, rotate & flip",
+    "resize": "Resize",
+    "watermark": "Watermark",
+    "rename": "Rename"
   }
 }

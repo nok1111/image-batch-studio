@@ -13,7 +13,8 @@
     "metadata": "Limpiar metadatos",
     "cropRotate": "Recortar y rotar",
     "analyzer": "Analizador",
-    "settings": "Ajustes"
+    "settings": "Ajustes",
+    "pipeline": "Pipeline"
   },
   "modules": {
     "converter": "Convierte imágenes entre PNG, JPG, WebP, AVIF, BMP, TIFF, GIF e ICO.",
@@ -25,7 +26,8 @@
     "cropRotate": "Recorta, rota y voltea imágenes en lote.",
     "analyzer": "Revisa dimensiones, formatos, transparencia y ahorro potencial.",
     "unavailableTitle": "Este módulo aún no está disponible",
-    "unavailableBody": "Está en desarrollo y se habilitará en una próxima versión."
+    "unavailableBody": "Está en desarrollo y se habilitará en una próxima versión.",
+    "pipeline": "Encadena recorte, redimensionado, marca de agua, renombrado y conversión en un solo lote."
   },
   "dashboard": {
     "welcome": "Bienvenido a Image Batch Studio",
@@ -255,5 +257,11 @@
     "preview": "Imagen de vista previa",
     "previewHint": "Vista aproximada — el resultado final lo genera el motor.",
     "previewError": "No se pudo cargar la imagen de vista previa"
+  },
+  "pipe": {
+    "transform": "Recortar, girar y voltear",
+    "resize": "Redimensionar",
+    "watermark": "Marca de agua",
+    "rename": "Renombrar"
   }
 }

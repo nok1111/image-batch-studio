@@ -113,4 +113,45 @@ describe("module jobs", () => {
     });
     expect(c.resize).toBeNull();
   });
+
+  it("pipeline sends only the enabled steps and converts the output", () => {
+    const o = resolveOptions(
+      "pipeline",
+      {
+        pipelineUse: {
+          transform: true,
+          resize: true,
+          watermark: true,
+          rename: false,
+        },
+        format: "jpeg",
+      },
+      settings,
+    );
+    const j = buildJob("pipeline", o, settings, "/out", []);
+    expect(j.output.mode).toEqual({ kind: "convert", format: "jpeg" });
+    expect(j.transform).not.toBeNull();
+    expect(j.resize).not.toBeNull();
+    expect(j.watermark).not.toBeNull();
+    expect(j.rename).toBeNull();
+    const off = buildJob(
+      "pipeline",
+      {
+        ...o,
+        pipelineUse: {
+          transform: false,
+          resize: false,
+          watermark: false,
+          rename: false,
+        },
+      },
+      settings,
+      "/out",
+      [],
+    );
+    expect(off.transform).toBeNull();
+    expect(off.resize).toBeNull();
+    expect(off.watermark).toBeNull();
+    expect(off.rename).toBeNull();
+  });
 });
