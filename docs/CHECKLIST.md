@@ -25,7 +25,7 @@
 - [x] Benchmark command + baseline (docs/BENCHMARK.md); Windows 1000×12 MP figure pending
 
 ## Phase 4 — Pro
-- [ ] Watermark  - [ ] Metadata Cleaner  - [ ] Crop & Rotate  - [ ] Analyzer  - [ ] Preset import/export  - [ ] AVIF input
+- [ ] Watermark  - [x] Metadata Cleaner  - [x] Crop & Rotate  - [ ] Analyzer  - [ ] Preset import/export  - [ ] AVIF input
 
 ## Phase 5 — Commercialization
 - [ ] Licensing + 3-day trial (ADR 0005)  - [ ] Signed installer  - [ ] Onboarding  - [ ] Docs / landing

@@ -33,14 +33,62 @@ export interface ToolModule {
 
 /** Sidebar order follows the product spec. */
 export const TOOL_MODULES: ToolModule[] = [
-  { id: "converter", path: "/converter", icon: RefreshCw, available: true, accent: "accent" },
-  { id: "compressor", path: "/compressor", icon: Minimize2, available: true, accent: "teal" },
-  { id: "resizer", path: "/resizer", icon: Scaling, available: true, accent: "accent" },
-  { id: "watermark", path: "/watermark", icon: Stamp, available: false, accent: "teal" },
-  { id: "renamer", path: "/renamer", icon: TextCursorInput, available: true, accent: "accent" },
-  { id: "metadata", path: "/metadata", icon: ShieldCheck, available: false, accent: "teal" },
-  { id: "cropRotate", path: "/crop-rotate", icon: Crop, available: false, accent: "accent" },
-  { id: "analyzer", path: "/analyzer", icon: ScanSearch, available: false, accent: "teal" },
+  {
+    id: "converter",
+    path: "/converter",
+    icon: RefreshCw,
+    available: true,
+    accent: "accent",
+  },
+  {
+    id: "compressor",
+    path: "/compressor",
+    icon: Minimize2,
+    available: true,
+    accent: "teal",
+  },
+  {
+    id: "resizer",
+    path: "/resizer",
+    icon: Scaling,
+    available: true,
+    accent: "accent",
+  },
+  {
+    id: "watermark",
+    path: "/watermark",
+    icon: Stamp,
+    available: false,
+    accent: "teal",
+  },
+  {
+    id: "renamer",
+    path: "/renamer",
+    icon: TextCursorInput,
+    available: true,
+    accent: "accent",
+  },
+  {
+    id: "metadata",
+    path: "/metadata",
+    icon: ShieldCheck,
+    available: true,
+    accent: "teal",
+  },
+  {
+    id: "cropRotate",
+    path: "/crop-rotate",
+    icon: Crop,
+    available: true,
+    accent: "accent",
+  },
+  {
+    id: "analyzer",
+    path: "/analyzer",
+    icon: ScanSearch,
+    available: false,
+    accent: "teal",
+  },
 ];
 
 export const NAV_ITEMS = [
@@ -57,4 +105,5 @@ export const QUICK_ACTIONS: { key: string; module: ModuleId }[] = [
   { key: "rename", module: "renamer" },
 ];
 
-export const moduleById = (id: ModuleId) => TOOL_MODULES.find((m) => m.id === id)!;
+export const moduleById = (id: ModuleId) =>
+  TOOL_MODULES.find((m) => m.id === id)!;

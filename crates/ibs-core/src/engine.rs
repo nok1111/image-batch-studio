@@ -92,6 +92,12 @@ fn validate(job: &Job) -> Result<(), JobError> {
         }
         r.validate().map_err(JobError::InvalidOptions)?;
     }
+    if let Some(t) = &job.transform {
+        if o.mode == OutputMode::CopyOriginal {
+            return Err(JobError::CopyWithResize);
+        }
+        t.validate().map_err(JobError::InvalidOptions)?;
+    }
     if let Some(r) = &job.rename {
         r.validate().map_err(JobError::InvalidOptions)?;
     }
@@ -401,10 +407,13 @@ fn write_one(
             if decoded.animated {
                 warnings.push(FileWarning::FirstFrameOnly);
             }
-            let img = match &job.resize {
-                Some(r) => r.apply(&decoded.image),
+            let mut img = match &job.transform {
+                Some(t) => t.apply(&decoded.image)?,
                 None => decoded.image,
             };
+            if let Some(r) = &job.resize {
+                img = r.apply(&img);
+            }
             codec::check_encodable(format, img.width(), img.height())?;
             if cancel.load(Ordering::Relaxed) {
                 return Ok(None);

@@ -3,4 +3,4 @@
 /**
  * Stable per-file error codes; the UI localizes by code.
  */
-export type FileErrorCode = "unsupported" | "decode" | "tooLarge" | "io" | "encode" | "verify" | "wouldOverwriteSource" | "outputUnsupported" | "internal";
+export type FileErrorCode = "unsupported" | "decode" | "tooLarge" | "io" | "encode" | "verify" | "wouldOverwriteSource" | "cropOutside" | "outputUnsupported" | "internal";

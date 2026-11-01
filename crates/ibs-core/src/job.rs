@@ -1,3 +1,4 @@
+use crate::transform::TransformSpec;
 use crate::{ConflictPolicy, FileError, ImageFormat, RenameSpec, ResizeSpec};
 use serde::{Deserialize, Serialize};
 use ts_rs::TS;
@@ -51,6 +52,8 @@ pub struct OutputSpec {
 pub struct Job {
     pub inputs: Vec<String>,
     pub output: OutputSpec,
+    /// Crop / rotate / flip applied before resize.
+    pub transform: Option<TransformSpec>,
     pub resize: Option<ResizeSpec>,
     /// Output file names; without it outputs keep the input's name.
     pub rename: Option<RenameSpec>,

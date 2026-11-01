@@ -13,8 +13,19 @@ const FLUSH_INTERVAL: Duration = Duration::from_millis(100);
 
 /// Expands dropped/selected files and folders off the main thread.
 #[tauri::command]
-pub async fn scan_inputs(paths: Vec<String>) -> CommandResult<ScanResult> {
+pub async fn scan_inputs(
+    state: State<'_, AppState>,
+    paths: Vec<String>,
+) -> CommandResult<ScanResult> {
     let paths: Vec<PathBuf> = paths.into_iter().map(PathBuf::from).collect();
+    // Any file the user picked may be shown (crop editor, comparison).
+    if let Ok(mut viewable) = state.viewable.lock() {
+        viewable.extend(paths.iter().cloned());
+    }
+    // Any file the user picked may be shown (crop editor, comparison).
+    if let Ok(mut viewable) = state.viewable.lock() {
+        viewable.extend(paths.iter().cloned());
+    }
     tauri::async_runtime::spawn_blocking(move || ibs_core::scan(&paths, &AtomicBool::new(false)))
         .await
         .map_err(|e| CommandError {
