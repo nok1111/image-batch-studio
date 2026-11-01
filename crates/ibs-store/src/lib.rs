@@ -87,12 +87,23 @@ impl Store {
     }
 
     pub fn reset_settings(&self) -> Result<Settings, StoreError> {
-        let conn = self.conn.lock().map_err(|_| StoreError::Poisoned)?;
-        conn.execute(
-            "DELETE FROM settings WHERE key = ?1",
-            [settings::SETTINGS_KEY],
-        )?;
-        Ok(Settings::default())
+        // Resetting preferences should not re-trigger the first-run wizard.
+        let onboarding_done = self.settings().map(|s| s.onboarding_done).unwrap_or(false);
+        {
+            let conn = self.conn.lock().map_err(|_| StoreError::Poisoned)?;
+            conn.execute(
+                "DELETE FROM settings WHERE key = ?1",
+                [settings::SETTINGS_KEY],
+            )?;
+        }
+        let restored = Settings {
+            onboarding_done,
+            ..Settings::default()
+        };
+        if onboarding_done {
+            self.save_settings(&restored)?;
+        }
+        Ok(restored)
     }
 }
 

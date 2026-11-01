@@ -14,7 +14,7 @@ const STEPS = 3;
 
 export function OnboardingWizard() {
   const { t } = useTranslation();
-  const { settings, update, saving } = useSettingsStore();
+  const { settings, update, saving, error } = useSettingsStore();
   const license = useLicenseStore((s) => s.status);
   const [step, setStep] = useState(0);
 
@@ -142,6 +142,11 @@ export function OnboardingWizard() {
         )}
 
         <div className="flex items-center justify-between">
+          {error && (
+            <p role="alert" className="mr-4 text-xs text-danger">
+              {t("settings.saveError", { message: error })}
+            </p>
+          )}
           <Button variant="ghost" onClick={finish} disabled={saving}>
             {t("onboarding.skip")}
           </Button>
