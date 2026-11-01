@@ -40,6 +40,9 @@ pub struct Licensed {
     pub email: Option<String>,
     /// Last successful server validation (unix secs).
     pub validated: u64,
+    /// Signed keys may expire (payload `exp`); None = perpetual.
+    #[serde(default)]
+    pub expires: Option<u64>,
 }
 
 /// One trial/license record as kept by every marker backend.
@@ -56,6 +59,7 @@ pub struct Record {
 }
 
 #[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
 pub struct LicenseStatus {
     /// "trial" | "licensed" | "expired"
     pub state: &'static str,
@@ -142,11 +146,12 @@ fn machine_guid() -> Option<String> {
     None
 }
 
-fn mac_of(first: u64, last: u64, fingerprint: &str) -> String {
+fn mac_of(rec: &Record, fingerprint: &str) -> String {
     use hmac::{Hmac, Mac};
     use sha2::Sha256;
     let mut m = <Hmac<Sha256> as Mac>::new_from_slice(MAC_KEY_PARTS).expect("hmac key");
-    m.update(format!("{first}|{last}|{fingerprint}").as_bytes());
+    let lic = serde_json::to_string(&rec.lic).unwrap_or_default();
+    m.update(format!("{}|{}|{}|{fingerprint}", rec.first, rec.last, lic).as_bytes());
     hex(&m.finalize().into_bytes())
 }
 
@@ -167,12 +172,13 @@ fn b64d(s: &str) -> Result<Vec<u8>, LicenseError> {
 }
 
 fn sign_record(mut rec: Record, fingerprint: &str) -> Record {
-    rec.mac = mac_of(rec.first, rec.last, fingerprint);
+    rec.mac = String::new();
+    rec.mac = mac_of(&rec, fingerprint);
     rec
 }
 
 fn verify_record(rec: &Record, fingerprint: &str) -> bool {
-    rec.mac == mac_of(rec.first, rec.last, fingerprint)
+    rec.mac == mac_of(rec, fingerprint)
 }
 
 /// Where the license state may live. Store already covers SQLite; the file
@@ -284,7 +290,18 @@ impl<'a> License<'a> {
         if let Some(dir) = self.seen_file.parent() {
             let _ = std::fs::create_dir_all(dir);
         }
-        let _ = std::fs::write(&self.seen_file, mac_of(rec.first, 0, &self.fingerprint));
+        let _ = std::fs::write(
+            &self.seen_file,
+            mac_of(
+                &Record {
+                    first: rec.first,
+                    last: 0,
+                    lic: None,
+                    mac: String::new(),
+                },
+                &self.fingerprint,
+            ),
+        );
     }
 
     /// Resolve the current record, applying trial-start, merging, and
@@ -335,7 +352,8 @@ impl<'a> License<'a> {
         if let Some(lic) = rec.as_ref().and_then(|r| r.lic.clone()) {
             let elapsed = now().saturating_sub(lic.validated);
             let grace = GRACE_DAYS.saturating_sub(elapsed / 86400);
-            let expired_lic = expired || elapsed >= GRACE_DAYS * 86400;
+            let expired_lic =
+                expired || elapsed >= GRACE_DAYS * 86400 || lic.expires.is_some_and(|e| now() >= e);
             return LicenseStatus {
                 state: if expired_lic { "expired" } else { "licensed" },
                 days_left: 0,
@@ -386,7 +404,8 @@ impl<'a> License<'a> {
                 key: key.to_string(),
                 instance_id: None,
                 email: claims.email,
-                validated: u64::MAX,
+                validated: now(),
+                expires: claims.exp,
             })?;
             return Ok(self.status());
         }
@@ -396,12 +415,13 @@ impl<'a> License<'a> {
             ));
         }
         let iid = ls_activate(key)?;
-        let _ = ls_validate(key, &iid);
+        ls_validate(key, &iid)?;
         self.store_license(Licensed {
             key: key.to_string(),
             instance_id: Some(iid),
             email: None,
             validated: now(),
+            expires: None,
         })?;
         Ok(self.status())
     }
@@ -426,7 +446,9 @@ impl<'a> License<'a> {
     pub fn deactivate(&self) -> Result<LicenseStatus, LicenseError> {
         if let Some(lic) = self.merged().and_then(|r| r.lic) {
             if let Some(iid) = lic.instance_id {
-                let _ = ls_deactivate(&lic.key, &iid); // best effort
+                // Keep the local license on failure: the server still holds
+                // the instance and the user needs the id to retry/transfer.
+                ls_deactivate(&lic.key, &iid)?;
             }
         }
         let (rec, _) = self.current();
@@ -487,6 +509,9 @@ fn ls_activate(key: &str) -> Result<String, LicenseError> {
         LicenseError::Network(m) => LicenseError::Invalid(m),
         other => other,
     })?;
+    if res.get("activated").and_then(|v| v.as_bool()) != Some(true) {
+        return Err(LicenseError::Invalid("activation was rejected".into()));
+    }
     res.pointer("/instance/id")
         .and_then(|v| {
             v.as_str()
