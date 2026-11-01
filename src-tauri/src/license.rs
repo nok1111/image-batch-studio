@@ -351,13 +351,18 @@ impl<'a> License<'a> {
         let (rec, expired) = self.current();
         if let Some(lic) = rec.as_ref().and_then(|r| r.lic.clone()) {
             let elapsed = now().saturating_sub(lic.validated);
-            let grace = GRACE_DAYS.saturating_sub(elapsed / 86400);
+            // Signed keys never revalidate — no grace countdown for them.
+            let grace = if lic.instance_id.is_some() {
+                Some(GRACE_DAYS.saturating_sub(elapsed / 86400))
+            } else {
+                None
+            };
             let expired_lic =
                 expired || elapsed >= GRACE_DAYS * 86400 || lic.expires.is_some_and(|e| now() >= e);
             return LicenseStatus {
                 state: if expired_lic { "expired" } else { "licensed" },
                 days_left: 0,
-                grace_days_left: Some(grace),
+                grace_days_left: grace,
                 masked_key: Some(mask(&lic.key)),
                 email: lic.email,
                 provider_ready: provider_ready(),
