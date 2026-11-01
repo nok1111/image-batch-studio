@@ -32,7 +32,14 @@ const MIGRATIONS: &[&str] = &[
     );"#,
     r#"CREATE TABLE watermark_images (
         path TEXT PRIMARY KEY NOT NULL
-    );"#,
+    );
+    -- Presets already saved by a v3 build keep their logo previews: their
+    -- image paths come from the file dialog, so they are trusted.
+    INSERT INTO watermark_images (path)
+        SELECT DISTINCT json_extract(spec, '$.imagePath')
+        FROM watermark_presets
+        WHERE json_extract(spec, '$.imagePath') NOT NULL
+          AND json_extract(spec, '$.imagePath') != '';"#,
 ];
 
 pub const LATEST: usize = MIGRATIONS.len();

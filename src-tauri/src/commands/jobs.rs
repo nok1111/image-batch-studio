@@ -127,11 +127,15 @@ pub fn pick_watermark_image(
 /// are not — and the file still has to decode as an image.
 #[tauri::command]
 pub fn register_watermark_image(state: State<'_, AppState>, path: String) -> CommandResult<()> {
+    // Stored paths are already canonical (canonicalized at pick time), so
+    // compare verbatim: canonicalizing both sides would also accept a
+    // picked path that was later retargeted via symlink.
     let path = std::fs::canonicalize(PathBuf::from(&path)).unwrap_or_else(|_| PathBuf::from(&path));
-    let allowed = state.store.watermark_image_paths()?.iter().any(|p| {
-        let stored = PathBuf::from(p);
-        std::fs::canonicalize(&stored).unwrap_or(stored) == path
-    });
+    let allowed = state
+        .store
+        .watermark_image_paths()?
+        .iter()
+        .any(|p| std::path::Path::new(p).as_os_str() == path.as_os_str());
     if !allowed {
         return Err(CommandError {
             code: "image",
