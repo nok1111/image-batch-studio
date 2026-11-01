@@ -1,6 +1,6 @@
 import type { ModuleId } from "@/app/modules";
 import type { ModuleOptions } from "@/features/workspace/job";
-import type { ResizePreset } from "@/lib/ipc";
+import type { ResizePreset, ResizeSpec } from "@/lib/ipc";
 
 export const PRESETS_VERSION = 1;
 
@@ -38,6 +38,68 @@ const OPTION_KEYS: Record<
   outputDir: "string|null",
 };
 
+const RESIZE_MODES = new Set(["fit", "fill", "exact", "width", "height", "percent"]);
+const ROTATIONS = new Set([0, 90, 180, 270]);
+
+const num = (v: unknown) => typeof v === "number" && Number.isFinite(v);
+
+function isResizeSpec(v: unknown): v is ResizeSpec {
+  const s = v as Partial<ResizeSpec> | null;
+  return (
+    !!s &&
+    typeof s === "object" &&
+    typeof s.mode === "string" &&
+    RESIZE_MODES.has(s.mode) &&
+    num(s.width) &&
+    num(s.height) &&
+    num(s.percent) &&
+    typeof s.allowUpscale === "boolean"
+  );
+}
+
+function isCropSpec(v: unknown): boolean {
+  const s = v as Record<string, unknown> | null;
+  return (
+    !!s && typeof s === "object" && num(s.x) && num(s.y) && num(s.width) && num(s.height)
+  );
+}
+
+function isTransformSpec(v: unknown): boolean {
+  const s = v as Record<string, unknown> | null;
+  return (
+    !!s &&
+    typeof s === "object" &&
+    typeof s.rotate === "number" &&
+    ROTATIONS.has(s.rotate) &&
+    typeof s.flipHorizontal === "boolean" &&
+    typeof s.flipVertical === "boolean" &&
+    (s.crop === null || isCropSpec(s.crop))
+  );
+}
+
+function isRenameSpec(v: unknown): boolean {
+  const s = v as Record<string, unknown> | null;
+  return (
+    !!s &&
+    typeof s === "object" &&
+    typeof s.template === "string" &&
+    typeof s.prefix === "string" &&
+    typeof s.suffix === "string" &&
+    typeof s.find === "string" &&
+    typeof s.replace === "string" &&
+    num(s.start)
+  );
+}
+
+/** Spec-valued options need full shape validation, not just "is an object". */
+const OBJECT_VALIDATORS: Partial<
+  Record<keyof ModuleOptions, (v: unknown) => boolean>
+> = {
+  resize: isResizeSpec,
+  transform: isTransformSpec,
+  rename: isRenameSpec,
+};
+
 function typeOk(v: unknown, kind: string): boolean {
   switch (kind) {
     case "number|null":
@@ -51,18 +113,31 @@ function typeOk(v: unknown, kind: string): boolean {
   }
 }
 
-/** Keeps only known keys with the right primitive type; engines validate values. */
+/** Keeps only known keys with the right shape; engines validate values. */
 function sanitizeOptions(raw: unknown): Partial<ModuleOptions> | null {
   if (!raw || typeof raw !== "object" || Array.isArray(raw)) return null;
   const out: Partial<ModuleOptions> = {};
   const src = raw as Record<string, unknown>;
   for (const [key, kind] of Object.entries(OPTION_KEYS)) {
     const v = src[key];
-    if (v !== undefined && typeOk(v, kind)) {
+    if (v === undefined) continue;
+    const validator = OBJECT_VALIDATORS[key as keyof ModuleOptions];
+    if (validator ? validator(v) : typeOk(v, kind)) {
       (out as Record<string, unknown>)[key] = v;
     }
   }
   return Object.keys(out).length > 0 ? out : {};
+}
+
+/** Two resize specs that configure the same result. */
+export function sameResizeSpec(a: ResizeSpec, b: ResizeSpec): boolean {
+  return (
+    a.mode === b.mode &&
+    a.width === b.width &&
+    a.height === b.height &&
+    a.percent === b.percent &&
+    a.allowUpscale === b.allowUpscale
+  );
 }
 
 /** Builds the portable presets file from live state. */
@@ -95,10 +170,7 @@ export function parsePresetsFile(text: string): PresetsFile {
           !!p &&
           typeof p === "object" &&
           typeof (p as ResizePreset).name === "string" &&
-          typeof (p as ResizePreset).spec === "object" &&
-          (p as ResizePreset).spec !== null &&
-          typeof (p as ResizePreset).spec.width === "number" &&
-          typeof (p as ResizePreset).spec.height === "number",
+          isResizeSpec((p as ResizePreset).spec),
       )
     : [];
   return { version: PRESETS_VERSION, moduleOptions, resizePresets };

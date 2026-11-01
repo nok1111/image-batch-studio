@@ -41,13 +41,21 @@ describe("presets file", () => {
         moduleOptions: {
           notAModule: { format: "png" },
           converter: { format: "png", evil: 1, quality: "high" },
+          resizer: { resize: {}, transform: { rotate: 45 } },
         },
-        resizePresets: [{ name: "no spec" }, null, { name: "Ok", spec }],
+        resizePresets: [
+          { name: "no spec" },
+          null,
+          { name: "partial spec", spec: { width: 10 } },
+          { name: "Ok", spec },
+        ],
       }),
     );
     expect(parsed.moduleOptions["notAModule" as never]).toBeUndefined();
     // Wrong-typed fields are dropped, valid ones kept.
     expect(parsed.moduleOptions.converter).toEqual({ format: "png" });
+    // Malformed spec objects are dropped wholesale, not shallow-merged.
+    expect(parsed.moduleOptions.resizer).toEqual({});
     expect(parsed.resizePresets.map((p) => p.name)).toEqual(["Ok"]);
   });
 
