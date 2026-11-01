@@ -9,6 +9,7 @@ use std::sync::{mpsc, Arc};
 use std::time::{Duration, Instant};
 use tauri::ipc::Channel;
 use tauri::{AppHandle, Manager, State};
+use tauri_plugin_dialog::DialogExt;
 
 /// Results are forwarded to the UI in batches at most this often (~10 Hz).
 const FLUSH_INTERVAL: Duration = Duration::from_millis(100);
@@ -230,29 +231,66 @@ pub fn analyze_files(
     Ok(())
 }
 
-/// Writes the presets JSON the user picked with the save dialog.
-#[tauri::command]
-pub fn export_presets(path: String, contents: String) -> CommandResult<()> {
-    std::fs::write(&path, contents).map_err(|e| CommandError {
-        code: "io",
-        message: e.to_string(),
-    })
-}
+const PRESETS_MAX_BYTES: u64 = 4 * 1024 * 1024;
 
-/// Reads a presets JSON the user picked with the open dialog.
+/// Opens the save dialog itself and writes the presets JSON to the path the
+/// user picks — the webview never supplies a path. `None` = cancelled.
 #[tauri::command]
-pub fn import_presets(path: String) -> CommandResult<String> {
-    let data = std::fs::read(&path).map_err(|e| CommandError {
+pub fn export_presets(app: AppHandle, contents: String) -> CommandResult<Option<String>> {
+    let Some(file) = app
+        .dialog()
+        .file()
+        .add_filter("Presets JSON", &["json"])
+        .set_file_name("image-batch-studio-presets.json")
+        .blocking_save_file()
+    else {
+        return Ok(None);
+    };
+    let path = file.into_path().map_err(|e| CommandError {
         code: "io",
         message: e.to_string(),
     })?;
-    if data.len() > 4 * 1024 * 1024 {
+    std::fs::write(&path, contents).map_err(|e| CommandError {
+        code: "io",
+        message: e.to_string(),
+    })?;
+    Ok(Some(path.to_string_lossy().into_owned()))
+}
+
+/// Opens the picker itself and returns the chosen presets JSON — the webview
+/// never supplies a path. `None` = cancelled.
+#[tauri::command]
+pub fn import_presets(app: AppHandle) -> CommandResult<Option<String>> {
+    let Some(file) = app
+        .dialog()
+        .file()
+        .add_filter("Presets JSON", &["json"])
+        .blocking_pick_file()
+    else {
+        return Ok(None);
+    };
+    let path = file.into_path().map_err(|e| CommandError {
+        code: "io",
+        message: e.to_string(),
+    })?;
+    // Enforce the cap before allocating the whole file in memory.
+    let len = std::fs::metadata(&path)
+        .map_err(|e| CommandError {
+            code: "io",
+            message: e.to_string(),
+        })?
+        .len();
+    if len > PRESETS_MAX_BYTES {
         return Err(CommandError {
             code: "io",
             message: "file too large to be a presets file".into(),
         });
     }
-    String::from_utf8(data).map_err(|_| CommandError {
+    let data = std::fs::read(&path).map_err(|e| CommandError {
+        code: "io",
+        message: e.to_string(),
+    })?;
+    String::from_utf8(data).map(Some).map_err(|_| CommandError {
         code: "io",
         message: "not a UTF-8 presets file".into(),
     })

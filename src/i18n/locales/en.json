@@ -104,7 +104,8 @@
     "presetsImport": "Import…",
     "presetsExported": "Presets exported.",
     "presetsImported": "Imported settings for {{modules}} modules and {{count}} resize presets.",
-    "presetsInvalid": "Not a valid presets file"
+    "presetsInvalid": "Not a valid presets file",
+    "presetsImportPartial": "Imported settings for {{modules}} modules and {{count}} resize presets ({{failed}} failed)."
   },
   "workspace": {
     "addFiles": "Add files",

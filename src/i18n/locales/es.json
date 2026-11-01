@@ -104,7 +104,8 @@
     "presetsImport": "Importar…",
     "presetsExported": "Presets exportados.",
     "presetsImported": "Importadas opciones de {{modules}} módulos y {{count}} presets de redimensión.",
-    "presetsInvalid": "No es un archivo de presets válido"
+    "presetsInvalid": "No es un archivo de presets válido",
+    "presetsImportPartial": "Importadas opciones de {{modules}} módulos y {{count}} presets de redimensión ({{failed}} fallaron)."
   },
   "workspace": {
     "addFiles": "Añadir archivos",

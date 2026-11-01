@@ -75,10 +75,11 @@ export const ipc = {
     channel.onmessage = onEvent;
     return invoke<void>("analyze_files", { paths, onEvent: channel });
   },
-  exportPresets: (path: string, contents: string) =>
-    invoke<void>("export_presets", { path, contents }),
-  importPresets: (path: string) =>
-    invoke<string>("import_presets", { path }),
+  /** Opens the save dialog in Rust; resolves to the written path or null (cancelled). */
+  exportPresets: (contents: string) =>
+    invoke<string | null>("export_presets", { contents }),
+  /** Opens the picker in Rust; resolves to file contents or null (cancelled). */
+  importPresets: () => invoke<string | null>("import_presets"),
   previewJob: (job: Job) => invoke<PlannedOutput[]>("preview_job", { job }),
   loadImage: (path: string) => invoke<ArrayBuffer>("load_image", { path }),
   listResizePresets: () => invoke<ResizePreset[]>("list_resize_presets"),

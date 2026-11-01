@@ -1,6 +1,6 @@
 import { useEffect, useState, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
-import { open, save } from "@tauri-apps/plugin-dialog";
+import { open } from "@tauri-apps/plugin-dialog";
 import { Check, Download, FolderOpen, Info, Lock, RotateCcw, Upload, X } from "lucide-react";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { Button } from "@/components/ui/button";
@@ -13,7 +13,7 @@ import type { ConflictPolicy, ImageFormat, Language, Theme } from "@/lib/ipc";
 import { errorMessage, ipc } from "@/lib/ipc";
 import { useQueueStore } from "@/stores/queue";
 import { useSettingsStore } from "@/stores/settings";
-import { buildPresetsFile, parsePresetsFile } from "./presets";
+import { buildPresetsFile, parsePresetsFile, sameResizeSpec } from "./presets";
 
 const FORMATS: { value: ImageFormat; label: string }[] = [
   { value: "jpeg", label: "JPG" },
@@ -54,15 +54,12 @@ export function SettingsPage() {
 
   const exportPresets = async () => {
     setPresetsMsg(null);
-    const path = await save({
-      defaultPath: "image-batch-studio-presets.json",
-      filters: [{ name: "JSON", extensions: ["json"] }],
-    });
-    if (!path) return;
     try {
       const resizePresets = await ipc.listResizePresets();
       const file = buildPresetsFile(useQueueStore.getState().options, resizePresets);
-      await ipc.exportPresets(path, JSON.stringify(file, null, 2));
+      // The command opens the save dialog itself; null = user cancelled.
+      const path = await ipc.exportPresets(JSON.stringify(file, null, 2));
+      if (path === null) return;
       setPresetsMsg({ ok: true, text: t("settings.presetsExported") });
     } catch (e) {
       setPresetsMsg({ ok: false, text: errorMessage(e) });
@@ -71,27 +68,53 @@ export function SettingsPage() {
 
   const importPresets = async () => {
     setPresetsMsg(null);
-    const picked = await open({
-      multiple: false,
-      filters: [{ name: "JSON", extensions: ["json"] }],
-    });
-    if (typeof picked !== "string") return;
     try {
-      const file = parsePresetsFile(await ipc.importPresets(picked));
+      // The command opens the picker itself; null = user cancelled.
+      const contents = await ipc.importPresets();
+      if (contents === null) return;
+      const file = parsePresetsFile(contents);
       const q = useQueueStore.getState();
-      let modules = 0;
-      for (const [mod, opts] of Object.entries(file.moduleOptions)) {
-        if (opts) {
-          q.setOptions(mod as Parameters<typeof q.setOptions>[0], opts);
-          modules++;
+      // Save resize presets first, skipping entries already present (name +
+      // identical spec, e.g. re-importing the seeded presets), and remember
+      // exported id -> new id so option presetIds can be remapped.
+      const existing = await ipc.listResizePresets();
+      const idMap = new Map<number, number>();
+      let saved = 0;
+      let failed = 0;
+      for (const preset of file.resizePresets) {
+        const dupe = existing.find(
+          (p) => p.name === preset.name && sameResizeSpec(p.spec, preset.spec),
+        );
+        if (dupe) {
+          if (preset.id !== null && dupe.id !== null) idMap.set(preset.id, dupe.id);
+          continue;
+        }
+        try {
+          const inserted = await ipc.saveResizePreset({ ...preset, id: null });
+          if (preset.id !== null && inserted.id !== null) idMap.set(preset.id, inserted.id);
+          saved++;
+        } catch {
+          failed++;
         }
       }
-      for (const preset of file.resizePresets) {
-        await ipc.saveResizePreset({ ...preset, id: null });
+      let modules = 0;
+      for (const [mod, opts] of Object.entries(file.moduleOptions)) {
+        if (!opts) continue;
+        const patch = { ...opts };
+        if (mod === "resizer" && patch.presetId != null) {
+          // Exported preset ids refer to the source machine; remap to the id
+          // the preset got here, or clear it ("custom") when it wasn't imported.
+          patch.presetId = idMap.get(patch.presetId) ?? null;
+        }
+        q.setOptions(mod as Parameters<typeof q.setOptions>[0], patch);
+        modules++;
       }
       setPresetsMsg({
-        ok: true,
-        text: t("settings.presetsImported", { modules, count: file.resizePresets.length }),
+        ok: failed === 0,
+        text:
+          failed === 0
+            ? t("settings.presetsImported", { modules, count: saved })
+            : t("settings.presetsImportPartial", { modules, count: saved, failed }),
       });
     } catch (e) {
       setPresetsMsg({
