@@ -83,21 +83,21 @@ pub fn decode(path: &Path) -> Result<Decoded, FileError> {
 
 /// Decodes an AVIF with zenavif (pure-Rust rav1d), applying `irot`/`imir`.
 fn decode_avif(path: &Path) -> Result<Decoded, FileError> {
+    // Cap the encoded file: it is kept whole in memory (and cloned by the
+    // parser), so don't admit inputs bigger than the decoder budget.
+    if std::fs::metadata(path).map_err(FileError::io)?.len() > MAX_ALLOC {
+        return Err(FileError::new(
+            FileErrorCode::TooLarge,
+            "encoded file exceeds the memory limit",
+        ));
+    }
     let data = std::fs::read(path).map_err(FileError::io)?;
     // `probe` can't read grid (tiled) AVIFs, so treat it as advisory: reject
     // oversized files early when it works, and check again after decoding.
     let probe = zenavif::detect::probe(&data).ok();
     let animated = probe.as_ref().is_some_and(|p| p.has_animation);
     if let Some(p) = &probe {
-        if p.width > MAX_DIMENSION || p.height > MAX_DIMENSION {
-            return Err(FileError::new(
-                FileErrorCode::TooLarge,
-                format!(
-                    "{}×{} exceeds the {MAX_DIMENSION}px limit",
-                    p.width, p.height
-                ),
-            ));
-        }
+        check_avif_dims(p.width, p.height)?;
     }
     let config = zenavif::DecoderConfig::new()
         .prefer_8bit(true)
@@ -108,25 +108,12 @@ fn decode_avif(path: &Path) -> Result<Decoded, FileError> {
     // Container-level dimensions (covers grid AVIFs detect::probe can't read),
     // checked before any pixel allocation.
     let info_dims = decoder.probe_info().map_err(avif_error)?;
-    if info_dims.width > MAX_DIMENSION || info_dims.height > MAX_DIMENSION {
-        return Err(FileError::new(
-            FileErrorCode::TooLarge,
-            format!(
-                "{}×{} exceeds the {MAX_DIMENSION}px limit",
-                info_dims.width, info_dims.height
-            ),
-        ));
-    }
+    check_avif_dims(info_dims.width, info_dims.height)?;
     let (buf, info) = decoder
         .decode_full(&zenavif::Unstoppable)
         .map_err(avif_error)?;
     let (w, h) = (buf.width(), buf.height());
-    if w > MAX_DIMENSION || h > MAX_DIMENSION {
-        return Err(FileError::new(
-            FileErrorCode::TooLarge,
-            format!("{w}×{h} exceeds the {MAX_DIMENSION}px limit"),
-        ));
-    }
+    check_avif_dims(w, h)?;
     let bytes = buf.as_slice().contiguous_bytes().into_owned();
     let desc = buf.descriptor();
     let mut image = if desc.layout_compatible(zenpixels::PixelDescriptor::RGBA8) {
@@ -170,6 +157,17 @@ fn decode_avif(path: &Path) -> Result<Decoded, FileError> {
         icc: info.icc_profile,
         exif,
     })
+}
+
+/// Per-side and total-pixel bounds, matching `frame_size_limit`.
+fn check_avif_dims(w: u32, h: u32) -> Result<(), FileError> {
+    if w > MAX_DIMENSION || h > MAX_DIMENSION || u64::from(w) * u64::from(h) > MAX_ALLOC / 4 {
+        return Err(FileError::new(
+            FileErrorCode::TooLarge,
+            format!("{w}×{h} exceeds the image limits"),
+        ));
+    }
+    Ok(())
 }
 
 fn avif_error(e: impl std::fmt::Display) -> FileError {
