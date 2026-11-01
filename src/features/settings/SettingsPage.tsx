@@ -92,6 +92,7 @@ export function SettingsPage() {
         try {
           const inserted = await ipc.saveResizePreset({ ...preset, id: null });
           if (preset.id !== null && inserted.id !== null) idMap.set(preset.id, inserted.id);
+          existing.push(inserted);
           saved++;
         } catch {
           failed++;
