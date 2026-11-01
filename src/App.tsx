@@ -8,6 +8,7 @@ import { DashboardPage } from "@/features/dashboard/DashboardPage";
 import { ModulePage } from "@/features/modules/ModulePage";
 import { SettingsPage } from "@/features/settings/SettingsPage";
 import { resolveLocale } from "@/i18n";
+import { useLicenseStore } from "@/stores/license";
 import { useSettingsStore } from "@/stores/settings";
 
 const router = createHashRouter([
@@ -28,6 +29,7 @@ export default function App() {
 
   useEffect(() => {
     void load();
+    void useLicenseStore.getState().load();
   }, [load]);
 
   useEffect(() => {

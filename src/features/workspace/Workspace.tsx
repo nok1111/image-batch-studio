@@ -18,6 +18,7 @@ import type { ModuleId } from "@/app/modules";
 import { formatBytes, formatDuration } from "@/lib/format";
 import { errorMessage, ipc, type PlannedOutput } from "@/lib/ipc";
 import { cn } from "@/lib/utils";
+import { useLicenseStore } from "@/stores/license";
 import { useQueueStore } from "@/stores/queue";
 import { useSettingsStore } from "@/stores/settings";
 import { CompareDialog } from "./CompareDialog";
@@ -169,6 +170,7 @@ export function Workspace({ module }: { module: ModuleId }) {
   };
 
   const busy = q.running || q.scanning;
+  const expired = useLicenseStore((s) => s.status)?.state === "expired";
   const s = q.summary;
   const saved = savings(q.items);
   const collisions =
@@ -268,6 +270,14 @@ export function Workspace({ module }: { module: ModuleId }) {
         <Panel module={module} o={o} set={set} disabled={q.running} items={q.items} />
       </Card>
 
+      {expired && (
+        <p
+          role="alert"
+          className="rounded-lg border border-danger/40 bg-danger/10 px-4 py-3 text-sm text-danger"
+        >
+          {t("license.expiredBanner")}
+        </p>
+      )}
       <Card className="flex flex-wrap items-end gap-6 px-5 py-4">
         <div className="flex min-w-0 flex-1 flex-col gap-1.5 text-xs text-text-secondary">
           {t("workspace.outputFolder")}
@@ -297,7 +307,7 @@ export function Workspace({ module }: { module: ModuleId }) {
           <Button
             size="lg"
             onClick={() => void start()}
-            disabled={busy || q.items.length === 0}
+            disabled={busy || expired || q.items.length === 0}
           >
             <Play />
             {t("workspace.start", { count: q.items.length })}

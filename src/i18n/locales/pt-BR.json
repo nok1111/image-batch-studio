@@ -263,5 +263,21 @@
     "resize": "Redimensionar",
     "watermark": "Marca d'água",
     "rename": "Renomear"
+  },
+  "license": {
+    "trialDays": "Teste: {{count}} dias restantes",
+    "licensed": "Licenciado",
+    "expired": "Teste expirado",
+    "trialStatus": "Teste — {{count}} dias restantes",
+    "licensedStatus": "Licenciado — chave {{key}}",
+    "expiredStatus": "O teste expirou — ative uma licença para continuar processando",
+    "graceNote": "Funciona offline por até {{count}} dias antes da revalidação.",
+    "keyPlaceholder": "Chave de licença (XXXX-XXXX-XXXX-XXXX)",
+    "activate": "Ativar",
+    "deactivate": "Desativar",
+    "buy": "Comprar licença",
+    "providerPending": "A loja ainda não está conectada — a ativação será habilitada no lançamento.",
+    "error": "Erro de licença: {{message}}",
+    "expiredBanner": "Seu teste de 3 dias expirou. Ative uma licença nas Configurações para continuar processando."
   }
 }

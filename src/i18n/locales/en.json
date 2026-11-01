@@ -263,5 +263,21 @@
     "resize": "Resize",
     "watermark": "Watermark",
     "rename": "Rename"
+  },
+  "license": {
+    "trialDays": "Trial: {{count}} days left",
+    "licensed": "Licensed",
+    "expired": "Trial expired",
+    "trialStatus": "Trial — {{count}} days left",
+    "licensedStatus": "Licensed — key {{key}}",
+    "expiredStatus": "Trial expired — activate a license to keep processing",
+    "graceNote": "Works offline for up to {{count}} more days before revalidation.",
+    "keyPlaceholder": "License key (XXXX-XXXX-XXXX-XXXX)",
+    "activate": "Activate",
+    "deactivate": "Deactivate",
+    "buy": "Buy a license",
+    "providerPending": "The store is not connected yet — activation will be enabled at release.",
+    "error": "License error: {{message}}",
+    "expiredBanner": "Your 3-day trial has expired. Activate a license in Settings to keep processing."
   }
 }

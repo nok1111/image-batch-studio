@@ -167,6 +167,16 @@ pub fn start_job(
     job: Job,
     on_event: Channel<JobEvent>,
 ) -> CommandResult<()> {
+    // Trial/licensing gate: processing is blocked when expired (ADR 0005).
+    // Revalidate first so a paid license recovers once connectivity returns.
+    let license = crate::license::License::load(&state.store, &state.data_dir);
+    license.refresh();
+    if !license.can_process() {
+        return Err(CommandError {
+            code: "license",
+            message: "trial expired — a license is required".into(),
+        });
+    }
     let concurrency = state.store.settings()?.concurrency as usize;
     let output_dir = ibs_core::engine::prepare(&job)?;
     let cancel = Arc::new(AtomicBool::new(false));

@@ -39,6 +39,19 @@ export type { WatermarkPreset } from "./bindings/WatermarkPreset";
 export type { WatermarkSpec } from "./bindings/WatermarkSpec";
 
 /** Shape of errors returned by Rust commands (see src-tauri/src/error.rs). */
+export interface LicenseStatus {
+  /** "trial" | "licensed" | "expired" */
+  state: string;
+  daysLeft: number;
+  graceDaysLeft: number | null;
+  maskedKey: string | null;
+  email: string | null;
+  providerReady: boolean;
+}
+
+/** Public checkout URL; shown as "Buy a license" when configured. */
+export const BUY_URL = "https://nok1111.lemonsqueezy.com/checkout";
+
 export interface CommandError {
   code: string;
   message: string;
@@ -71,6 +84,10 @@ export const ipc = {
     return invoke<void>("start_job", { job, onEvent: channel });
   },
   cancelJob: () => invoke<boolean>("cancel_job"),
+  licenseStatus: () => invoke<LicenseStatus>("license_status"),
+  licenseActivate: (key: string) =>
+    invoke<LicenseStatus>("license_activate", { key }),
+  licenseDeactivate: () => invoke<LicenseStatus>("license_deactivate"),
   previewJob: (job: Job) => invoke<PlannedOutput[]>("preview_job", { job }),
   loadImage: (path: string) => invoke<ArrayBuffer>("load_image", { path }),
   listResizePresets: () => invoke<ResizePreset[]>("list_resize_presets"),
