@@ -156,3 +156,75 @@ fn invalid_and_incompatible_specs_fail_the_job() {
     let j = job(vec![src], &d.path().join("d"), Some(wm));
     assert!(run(&j, 1, &AtomicBool::new(false), |_| {}).is_err());
 }
+
+#[test]
+fn long_unused_text_does_not_block_a_logo_job() {
+    let d = tempfile::tempdir().unwrap();
+    let src = d.path().join("a.png");
+    png(&src, Rgba([10, 10, 10, 255]), 60, 60);
+    let logo = d.path().join("logo.png");
+    png(&logo, Rgba([200, 0, 0, 255]), 20, 20);
+    let mut wm = spec();
+    wm.kind = WatermarkKind::Image;
+    wm.image_path = logo.to_string_lossy().into_owned();
+    wm.text = "x".repeat(600);
+    let r = collect(job(vec![src.clone()], d.path(), Some(wm)))
+        .into_iter()
+        .next()
+        .unwrap();
+    assert_eq!(r.status, FileStatus::Done);
+}
+
+#[test]
+fn rotated_logo_keeps_its_full_extent() {
+    // Direct apply: a 40x6 logo rotated 90° must keep ~40 px of vertical
+    // extent instead of being clipped back to 6 rows.
+    let d = tempfile::tempdir().unwrap();
+    let logo = d.path().join("logo.png");
+    png(&logo, Rgba([200, 0, 0, 255]), 40, 6);
+    let mut wm = spec();
+    wm.kind = WatermarkKind::Image;
+    wm.image_path = logo.to_string_lossy().into_owned();
+    wm.rotation = 90.0;
+    wm.scale = 0.4;
+    wm.opacity = 1.0;
+    let prepared = ibs_core::watermark::Prepared::load(&wm).unwrap();
+    let mut img =
+        image::DynamicImage::ImageRgba8(RgbaImage::from_pixel(100, 100, Rgba([10, 10, 10, 255])));
+    ibs_core::watermark::apply(&wm, &prepared, &mut img);
+    let img = img.to_rgba8();
+    // Centre column, well outside the original 6-px height: would stay
+    // background if the rotated logo had been clipped.
+    let red = |y: u32| img.get_pixel(50, y)[0] > 150;
+    assert!(red(32), "top end of the rotated logo is present");
+    assert!(red(68), "bottom end of the rotated logo is present");
+}
+
+#[test]
+fn extreme_aspect_logo_does_not_blow_up_the_tile() {
+    // A 2x200 logo at scale 0.5 on a 100px image must not resize to a
+    // ~5000-px-tall tile; the longest side is capped at scale*min_dim.
+    let d = tempfile::tempdir().unwrap();
+    let src = d.path().join("a.png");
+    png(&src, Rgba([10, 10, 10, 255]), 100, 100);
+    let logo = d.path().join("logo.png");
+    png(&logo, Rgba([200, 0, 0, 255]), 2, 200);
+    let mut wm = spec();
+    wm.kind = WatermarkKind::Image;
+    wm.image_path = logo.to_string_lossy().into_owned();
+    wm.scale = 0.5;
+    let r = collect(job(vec![src.clone()], d.path(), Some(wm)))
+        .into_iter()
+        .next()
+        .unwrap();
+    assert_eq!(r.status, FileStatus::Done);
+    let img = output_pixels(&r);
+    // Capped tile is ~1x50, so the red column covers only part of the image.
+    let reds = (0..100)
+        .filter(|&y| (30..70).any(|x| img.get_pixel(x, y)[0] > 150))
+        .count();
+    assert!(
+        reds > 10 && reds < 90,
+        "tile height bounded, got {reds} rows"
+    );
+}

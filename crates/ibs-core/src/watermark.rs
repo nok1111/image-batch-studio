@@ -63,7 +63,7 @@ pub struct WatermarkSpec {
     /// Clockwise degrees applied to the tile.
     pub rotation: f32,
     /// Tile size as a fraction of the image's smaller side (0 < s ≤ 1): text
-    /// em height for `text`, tile width for `image`.
+    /// em height for `text`, longest side for `image`.
     pub scale: f32,
     /// Edge margin as a fraction of the smaller side (0–0.5).
     pub margin: f32,
@@ -79,14 +79,19 @@ impl WatermarkSpec {
     pub fn validate(&self) -> Result<(), String> {
         let bad = |reason: &str| format!("watermark: {reason}");
         match self.kind {
-            WatermarkKind::Text if self.text.trim().is_empty() => return Err(bad("text is empty")),
-            WatermarkKind::Image if self.image_path.is_empty() => {
-                return Err(bad("image path is empty"))
+            WatermarkKind::Text => {
+                if self.text.trim().is_empty() {
+                    return Err(bad("text is empty"));
+                }
+                if self.text.chars().count() > 512 {
+                    return Err(bad("text longer than 512 characters"));
+                }
             }
-            _ => {}
-        }
-        if self.text.chars().count() > 512 {
-            return Err(bad("text longer than 512 characters"));
+            WatermarkKind::Image => {
+                if self.image_path.is_empty() {
+                    return Err(bad("image path is empty"));
+                }
+            }
         }
         if !(self.scale > 0.0 && self.scale <= 1.0) {
             return Err(bad("scale must be in (0, 1]"));
@@ -137,10 +142,13 @@ impl Prepared {
         let mut tile = match self {
             Prepared::Text(font) => render_text(font, &spec.text, size, spec.color),
             Prepared::Logo(rgba) => {
-                let w = size.round().max(1.0) as u32;
-                let h = (size * rgba.height() as f32 / rgba.width() as f32)
-                    .round()
-                    .max(1.0) as u32;
+                // Fit the longest side to `size` — a pathological aspect
+                // ratio (e.g. a 1x4000 logo) otherwise explodes the other
+                // dimension and can exhaust memory across the worker pool.
+                let longest = rgba.width().max(rgba.height()) as f32;
+                let k = size / longest;
+                let w = (rgba.width() as f32 * k).round().max(1.0) as u32;
+                let h = (rgba.height() as f32 * k).round().max(1.0) as u32;
                 image::imageops::resize(rgba, w, h, FilterType::Triangle)
             }
         };
@@ -149,7 +157,21 @@ impl Prepared {
         }
         let rad = spec.rotation.rem_euclid(360.0).to_radians();
         if rad > f32::EPSILON {
-            tile = rotate_about_center(&tile, rad, Interpolation::Bilinear, Rgba([0, 0, 0, 0]));
+            // rotate_about_center keeps the image size, so expand the canvas
+            // to the rotated bounding box first or the corners get clipped.
+            let (sin, cos) = (rad.sin().abs(), rad.cos().abs());
+            let tw = tile.width() as f32;
+            let th = tile.height() as f32;
+            let ew = ((tw * cos + th * sin).ceil() as u32).max(tile.width());
+            let eh = ((tw * sin + th * cos).ceil() as u32).max(tile.height());
+            let mut expanded = RgbaImage::from_pixel(ew, eh, Rgba([0, 0, 0, 0]));
+            image::imageops::overlay(
+                &mut expanded,
+                &tile,
+                ((ew - tile.width()) / 2) as i64,
+                ((eh - tile.height()) / 2) as i64,
+            );
+            tile = rotate_about_center(&expanded, rad, Interpolation::Bilinear, Rgba([0, 0, 0, 0]));
         }
         tile
     }
