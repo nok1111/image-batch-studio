@@ -404,7 +404,8 @@ impl<'a> License<'a> {
                 key: key.to_string(),
                 instance_id: None,
                 email: claims.email,
-                validated: now(),
+                // Signature already proves the key; expires covers `exp`.
+                validated: u64::MAX,
                 expires: claims.exp,
             })?;
             return Ok(self.status());
@@ -415,7 +416,11 @@ impl<'a> License<'a> {
             ));
         }
         let iid = ls_activate(key)?;
-        ls_validate(key, &iid)?;
+        if let Err(e) = ls_validate(key, &iid) {
+            // Free the activation slot so a retry can succeed.
+            let _ = ls_deactivate(key, &iid);
+            return Err(e);
+        }
         self.store_license(Licensed {
             key: key.to_string(),
             instance_id: Some(iid),
