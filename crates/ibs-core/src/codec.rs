@@ -105,6 +105,18 @@ fn decode_avif(path: &Path) -> Result<Decoded, FileError> {
     let mut decoder = zenavif::ManagedAvifDecoder::new(&data, &config).map_err(avif_error)?;
     // The parser keeps its own copy; ours is dead weight.
     drop(data);
+    // Container-level dimensions (covers grid AVIFs detect::probe can't read),
+    // checked before any pixel allocation.
+    let info_dims = decoder.probe_info().map_err(avif_error)?;
+    if info_dims.width > MAX_DIMENSION || info_dims.height > MAX_DIMENSION {
+        return Err(FileError::new(
+            FileErrorCode::TooLarge,
+            format!(
+                "{}×{} exceeds the {MAX_DIMENSION}px limit",
+                info_dims.width, info_dims.height
+            ),
+        ));
+    }
     let (buf, info) = decoder
         .decode_full(&zenavif::Unstoppable)
         .map_err(avif_error)?;
