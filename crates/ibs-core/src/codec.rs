@@ -84,25 +84,37 @@ pub fn decode(path: &Path) -> Result<Decoded, FileError> {
 /// Decodes an AVIF with zenavif (pure-Rust rav1d), applying `irot`/`imir`.
 fn decode_avif(path: &Path) -> Result<Decoded, FileError> {
     let data = std::fs::read(path).map_err(FileError::io)?;
-    let probe = zenavif::detect::probe(&data).map_err(avif_error)?;
-    let animated = probe.has_animation;
-    if probe.width > MAX_DIMENSION || probe.height > MAX_DIMENSION {
-        return Err(FileError::new(
-            FileErrorCode::TooLarge,
-            format!(
-                "{}×{} exceeds the {MAX_DIMENSION}px limit",
-                probe.width, probe.height
-            ),
-        ));
+    // `probe` can't read grid (tiled) AVIFs, so treat it as advisory: reject
+    // oversized files early when it works, and check again after decoding.
+    let probe = zenavif::detect::probe(&data).ok();
+    let animated = probe.as_ref().is_some_and(|p| p.has_animation);
+    if let Some(p) = &probe {
+        if p.width > MAX_DIMENSION || p.height > MAX_DIMENSION {
+            return Err(FileError::new(
+                FileErrorCode::TooLarge,
+                format!(
+                    "{}×{} exceeds the {MAX_DIMENSION}px limit",
+                    p.width, p.height
+                ),
+            ));
+        }
     }
     let config = zenavif::DecoderConfig::new()
         .prefer_8bit(true)
         .frame_size_limit(MAX_ALLOC as u32 / 4);
     let mut decoder = zenavif::ManagedAvifDecoder::new(&data, &config).map_err(avif_error)?;
+    // The parser keeps its own copy; ours is dead weight.
+    drop(data);
     let (buf, info) = decoder
         .decode_full(&zenavif::Unstoppable)
         .map_err(avif_error)?;
     let (w, h) = (buf.width(), buf.height());
+    if w > MAX_DIMENSION || h > MAX_DIMENSION {
+        return Err(FileError::new(
+            FileErrorCode::TooLarge,
+            format!("{w}×{h} exceeds the {MAX_DIMENSION}px limit"),
+        ));
+    }
     let bytes = buf.as_slice().contiguous_bytes().into_owned();
     let desc = buf.descriptor();
     let mut image = if desc.layout_compatible(zenpixels::PixelDescriptor::RGBA8) {
