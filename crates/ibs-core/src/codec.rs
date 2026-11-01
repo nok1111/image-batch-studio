@@ -84,9 +84,17 @@ pub fn decode(path: &Path) -> Result<Decoded, FileError> {
 /// Decodes an AVIF with zenavif (pure-Rust rav1d), applying `irot`/`imir`.
 fn decode_avif(path: &Path) -> Result<Decoded, FileError> {
     let data = std::fs::read(path).map_err(FileError::io)?;
-    let animated = zenavif::detect::probe(&data)
-        .map(|p| p.has_animation)
-        .unwrap_or(false);
+    let probe = zenavif::detect::probe(&data).map_err(avif_error)?;
+    let animated = probe.has_animation;
+    if probe.width > MAX_DIMENSION || probe.height > MAX_DIMENSION {
+        return Err(FileError::new(
+            FileErrorCode::TooLarge,
+            format!(
+                "{}×{} exceeds the {MAX_DIMENSION}px limit",
+                probe.width, probe.height
+            ),
+        ));
+    }
     let config = zenavif::DecoderConfig::new()
         .prefer_8bit(true)
         .frame_size_limit(MAX_ALLOC as u32 / 4);
@@ -95,12 +103,6 @@ fn decode_avif(path: &Path) -> Result<Decoded, FileError> {
         .decode_full(&zenavif::Unstoppable)
         .map_err(avif_error)?;
     let (w, h) = (buf.width(), buf.height());
-    if w > MAX_DIMENSION || h > MAX_DIMENSION {
-        return Err(FileError::new(
-            FileErrorCode::TooLarge,
-            format!("{w}×{h} exceeds the {MAX_DIMENSION}px limit"),
-        ));
-    }
     let bytes = buf.as_slice().contiguous_bytes().into_owned();
     let desc = buf.descriptor();
     let mut image = if desc.layout_compatible(zenpixels::PixelDescriptor::RGBA8) {
@@ -115,11 +117,12 @@ fn decode_avif(path: &Path) -> Result<Decoded, FileError> {
             format!("unsupported AVIF pixel format: {desc:?}"),
         ));
     };
+    // `irot` angles are counter-clockwise while image's rotate* are clockwise.
     if let Some(rot) = info.rotation {
         image = match rot.angle {
-            90 => image.rotate90(),
+            90 => image.rotate270(),
             180 => image.rotate180(),
-            270 => image.rotate270(),
+            270 => image.rotate90(),
             _ => image,
         };
     }
@@ -129,11 +132,19 @@ fn decode_avif(path: &Path) -> Result<Decoded, FileError> {
             _ => image.flipv(),
         };
     }
+    let mut exif = info.exif;
+    if let Some(chunk) = exif.as_deref_mut() {
+        // Orientation parsing expects the TIFF blob, without the "Exif\0\0" prefix.
+        let skip = if chunk.starts_with(b"Exif\0\0") { 6 } else { 0 };
+        if let Some(orientation) = Orientation::remove_from_exif_chunk(&mut chunk[skip..]) {
+            image.apply_orientation(orientation);
+        }
+    }
     Ok(Decoded {
         image,
         animated,
         icc: info.icc_profile,
-        exif: info.exif,
+        exif,
     })
 }
 
@@ -598,6 +609,31 @@ mod tests {
         assert_eq!((dec.image.width(), dec.image.height()), (37, 23));
         assert!(!dec.animated);
         assert!(dec.image.color().has_alpha());
+    }
+
+    #[test]
+    fn avif_exif_orientation_is_applied() {
+        let img = DynamicImage::new_rgb8(40, 24);
+        // EXIF orientation 6 (rotate 90° CW), big-endian TIFF.
+        let exif =
+            b"Exif\0\0MM\0\x2a\0\0\0\x08\0\x01\x01\x12\0\x03\0\0\0\x01\0\x06\0\0\0\0\0\0".to_vec();
+        let o = EncodeOptions {
+            format: ImageFormat::Avif,
+            quality: 80,
+            lossless: false,
+            icc: None,
+            exif: Some(&exif),
+        };
+        let bytes = encode(&img, &o).unwrap().bytes;
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("rot.avif");
+        std::fs::write(&path, &bytes).unwrap();
+        let dec = decode(&path).unwrap();
+        assert_eq!((dec.image.width(), dec.image.height()), (24, 40));
+        // The tag was reset in the returned EXIF, like other decoders.
+        if let Some(chunk) = dec.exif {
+            assert_eq!(Orientation::from_exif_chunk(&chunk), None);
+        }
     }
 
     #[test]
