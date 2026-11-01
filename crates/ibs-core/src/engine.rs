@@ -413,6 +413,9 @@ fn write_one(
             {
                 let bytes = std::fs::read(input).map_err(FileError::io)?;
                 if bytes.starts_with(b"GIF8") {
+                    if spec.target_size.is_some() {
+                        warnings.push(FileWarning::TargetSizeUnsupported);
+                    }
                     let stripped = gif::strip_metadata(&bytes)?;
                     let (w, h) = gif::screen_size(&stripped).unwrap_or((0, 0));
                     tmp.as_file_mut()
