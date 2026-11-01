@@ -6,6 +6,7 @@ pub mod codec;
 pub mod engine;
 pub mod error;
 pub mod format;
+pub mod gif;
 pub mod intake;
 pub mod job;
 pub mod naming;

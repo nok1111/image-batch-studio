@@ -2,6 +2,7 @@
 //! cancellation, write-to-temp → verify → atomic rename.
 
 use crate::codec::{self, EncodeOptions};
+use crate::gif;
 use crate::output::{Plan, Planner, TEMP_PREFIX};
 use crate::{
     FileError, FileErrorCode, FileResult, FileStatus, FileWarning, ImageFormat, Job,
@@ -403,6 +404,38 @@ fn write_one(
             })?;
         }
         Some(format) => {
+            // Pure metadata strip on a GIF goes byte-level so animation
+            // survives — decoding would collapse it to the first frame.
+            if format == ImageFormat::Gif
+                && spec.metadata == MetadataPolicy::Strip
+                && job.resize.is_none()
+                && job.transform.is_none()
+            {
+                let bytes = std::fs::read(input).map_err(FileError::io)?;
+                if bytes.starts_with(b"GIF8") {
+                    let stripped = gif::strip_metadata(&bytes)?;
+                    let (w, h) = gif::screen_size(&stripped).unwrap_or((0, 0));
+                    tmp.as_file_mut()
+                        .write_all(&stripped)
+                        .map_err(FileError::io)?;
+                    tmp.as_file_mut().flush().map_err(FileError::io)?;
+                    if cancel.load(Ordering::Relaxed) {
+                        return Ok(None);
+                    }
+                    codec::verify(tmp.path(), format, w, h)?;
+                    if cancel.load(Ordering::Relaxed) {
+                        return Ok(None);
+                    }
+                    let persisted = if replace {
+                        tmp.persist(target)
+                    } else {
+                        tmp.persist_noclobber(target)
+                    };
+                    let file = persisted.map_err(|e| FileError::io(e.error))?;
+                    let size = file.metadata().map_err(FileError::io)?.len();
+                    return Ok(Some(Written { size, warnings }));
+                }
+            }
             let decoded = codec::decode(input)?;
             if decoded.animated {
                 warnings.push(FileWarning::FirstFrameOnly);
