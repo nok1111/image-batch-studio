@@ -108,11 +108,21 @@ export function AnalysisTable({
                   {saving !== null ? `${saving >= 0 ? "−" : "+"}${Math.abs(saving).toFixed(0)}%` : ""}
                 </span>
                 <span className="flex w-20 shrink-0 items-center justify-end gap-1">
-                  <Badge variant={STATUS_VARIANT[item.status]}>
-                    {item.status === "pending" && running
-                      ? t("workspace.status.queued")
-                      : t(`workspace.status.${item.status}`)}
-                  </Badge>
+                  <span
+                    title={
+                      item.error
+                        ? `${t(`workspace.errors.${item.error.code}`)}\n${item.error.message}`
+                        : undefined
+                    }
+                  >
+                    <Badge variant={STATUS_VARIANT[item.status]}>
+                      {item.error
+                        ? t(`workspace.errors.${item.error.code}`)
+                        : item.status === "pending" && running
+                          ? t("workspace.status.queued")
+                          : t(`workspace.status.${item.status}`)}
+                    </Badge>
+                  </span>
                   {!running && (
                     <button
                       type="button"
