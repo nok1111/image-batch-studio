@@ -54,6 +54,7 @@ pub fn strip_metadata(src: &[u8]) -> Result<Vec<u8>, FileError> {
         out.extend_from_slice(&src[i..i + n]);
         i += n;
     }
+    let mut last_gce_len = 0;
     loop {
         match *src.get(i).ok_or_else(malformed)? {
             0x3B => {
@@ -77,22 +78,23 @@ pub fn strip_metadata(src: &[u8]) -> Result<Vec<u8>, FileError> {
                 let end = skip_sub_blocks(src, i + 2)?;
                 if !drop {
                     out.extend_from_slice(&src[i..end]);
-                } else if label == 0x01 {
-                    // A GCE binds to the next graphic — which can be this
-                    // plain-text block. Drop it too or it would rebind to the
+                    // Remember if a GCE was just written: it binds to the next
+                    // graphic, which may be a plain-text block we then drop.
+                    last_gce_len = if label == 0xF9 { end - i } else { 0 };
+                } else if label == 0x01 && last_gce_len > 0 {
+                    // Drop the bound GCE too or it would rebind to the
                     // following image and change its delay/disposal.
-                    if out.len() >= 8
-                        && out[out.len() - 8..out.len() - 5] == [0x21, 0xF9, 0x04]
-                        && out[out.len() - 1] == 0x00
-                    {
-                        out.truncate(out.len() - 8);
-                    }
+                    out.truncate(out.len() - last_gce_len);
+                    last_gce_len = 0;
                 }
+                // Comments/app extensions don't consume a pending GCE.
                 i = end;
             }
             0x2C => {
-                // Image descriptor: separator + 9 bytes, optional local color
-                // table, 1-byte LZW minimum code size, then data sub-blocks.
+                // Image descriptor: consumes any pending GCE, then separator
+                // + 9 bytes, optional local color table, 1-byte LZW minimum
+                // code size, then data sub-blocks.
+                last_gce_len = 0;
                 let packed = *src.get(i + 9).ok_or_else(malformed)?;
                 let lct = if packed & 0x80 != 0 {
                     3 * (1usize << ((packed & 0x07) + 1))
