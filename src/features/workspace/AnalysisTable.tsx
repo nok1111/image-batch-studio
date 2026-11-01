@@ -116,11 +116,9 @@ export function AnalysisTable({
                     }
                   >
                     <Badge variant={STATUS_VARIANT[item.status]}>
-                      {item.error
-                        ? t(`workspace.errors.${item.error.code}`)
-                        : item.status === "pending" && running
-                          ? t("workspace.status.queued")
-                          : t(`workspace.status.${item.status}`)}
+                      {item.status === "pending" && running
+                        ? t("workspace.status.queued")
+                        : t(`workspace.status.${item.status}`)}
                     </Badge>
                   </span>
                   {!running && (
