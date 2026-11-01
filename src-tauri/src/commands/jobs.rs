@@ -91,7 +91,9 @@ pub fn pick_watermark_image(
         .file()
         .add_filter(
             "Images",
-            &["png", "jpg", "jpeg", "webp", "bmp", "gif", "tif", "tiff", "avif"],
+            &[
+                "png", "jpg", "jpeg", "webp", "bmp", "gif", "tif", "tiff", "avif",
+            ],
         )
         .blocking_pick_file();
     let Some(file) = picked else {

@@ -90,8 +90,7 @@ fn decode_avif(path: &Path) -> Result<Decoded, FileError> {
     let config = zenavif::DecoderConfig::new()
         .prefer_8bit(true)
         .frame_size_limit(MAX_ALLOC as u32 / 4);
-    let mut decoder = zenavif::ManagedAvifDecoder::new(&data, &config)
-        .map_err(avif_error)?;
+    let mut decoder = zenavif::ManagedAvifDecoder::new(&data, &config).map_err(avif_error)?;
     let (buf, info) = decoder
         .decode_full(&zenavif::Unstoppable)
         .map_err(avif_error)?;
@@ -109,9 +108,7 @@ fn decode_avif(path: &Path) -> Result<Decoded, FileError> {
             image::RgbaImage::from_raw(w, h, bytes).ok_or_else(avif_decode_err)?,
         )
     } else if desc.layout_compatible(zenpixels::PixelDescriptor::RGB8) {
-        DynamicImage::ImageRgb8(
-            RgbImage::from_raw(w, h, bytes).ok_or_else(avif_decode_err)?,
-        )
+        DynamicImage::ImageRgb8(RgbImage::from_raw(w, h, bytes).ok_or_else(avif_decode_err)?)
     } else {
         return Err(FileError::new(
             FileErrorCode::Unsupported,
@@ -462,7 +459,12 @@ pub fn verify(path: &Path, _format: ImageFormat, width: u32, height: u32) -> Res
         ));
     }
     let img = decode(path)
-        .map_err(|e| FileError::new(FileErrorCode::Verify, format!("output does not decode: {e}")))?
+        .map_err(|e| {
+            FileError::new(
+                FileErrorCode::Verify,
+                format!("output does not decode: {e}"),
+            )
+        })?
         .image;
     let dims = (img.width(), img.height());
     if dims != (width, height) {
