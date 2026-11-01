@@ -1,5 +1,6 @@
 mod commands;
 mod error;
+mod license;
 mod state;
 
 use state::AppState;
@@ -17,6 +18,7 @@ pub fn run() {
             std::fs::create_dir_all(&data_dir)?;
             let store = ibs_store::Store::open(&data_dir.join(DB_FILE))?;
             app.manage(AppState {
+                data_dir: data_dir.clone(),
                 store,
                 running_job: Default::default(),
                 last_output_dir: Default::default(),
@@ -43,6 +45,9 @@ pub fn run() {
             commands::jobs::load_image,
             commands::jobs::start_job,
             commands::jobs::cancel_job,
+            commands::license::license_status,
+            commands::license::license_activate,
+            commands::license::license_deactivate,
         ])
         .run(tauri::generate_context!())
         .expect("error while running Image Batch Studio");

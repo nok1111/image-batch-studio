@@ -263,5 +263,21 @@
     "resize": "Redimensionar",
     "watermark": "Marca de agua",
     "rename": "Renombrar"
+  },
+  "license": {
+    "trialDays": "Prueba: {{count}} días restantes",
+    "licensed": "Con licencia",
+    "expired": "Prueba caducada",
+    "trialStatus": "Prueba — quedan {{count}} días",
+    "licensedStatus": "Con licencia — clave {{key}}",
+    "expiredStatus": "La prueba ha caducado — activa una licencia para seguir procesando",
+    "graceNote": "Funciona sin conexión hasta {{count}} días más antes de revalidar.",
+    "keyPlaceholder": "Clave de licencia (XXXX-XXXX-XXXX-XXXX)",
+    "activate": "Activar",
+    "deactivate": "Desactivar",
+    "buy": "Comprar licencia",
+    "providerPending": "La tienda aún no está conectada — la activación se habilitará en el lanzamiento.",
+    "error": "Error de licencia: {{message}}",
+    "expiredBanner": "Tu prueba de 3 días ha caducado. Activa una licencia en Ajustes para seguir procesando."
   }
 }

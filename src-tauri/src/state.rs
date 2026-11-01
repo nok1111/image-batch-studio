@@ -5,6 +5,8 @@ use std::sync::atomic::AtomicBool;
 use std::sync::{Arc, Mutex};
 
 pub struct AppState {
+    /// App-data dir (DB, trial markers).
+    pub data_dir: PathBuf,
     pub store: Store,
     /// Cancel token of the running batch, if any. One batch runs at a time.
     pub running_job: Mutex<Option<Arc<AtomicBool>>>,
