@@ -39,6 +39,9 @@ export interface ModuleOptions {
   rename: RenameSpec;
   outputDir: string | null;
   pipelineUse: PipelineUse;
+  /** Per-step preset selections inside the Pipeline (independent of presetId). */
+  pipelineResizePresetId: number | null;
+  pipelineWmPresetId: number | null;
 }
 
 export const COMPRESS_QUALITY: Record<
@@ -107,10 +110,12 @@ export function resolveOptions(
     outputDir: settings.defaultOutputDir,
     pipelineUse: {
       transform: false,
-      resize: true,
-      watermark: true,
+      resize: false,
+      watermark: false,
       rename: false,
     },
+    pipelineResizePresetId: null,
+    pipelineWmPresetId: null,
   };
   return { ...defaults, ...overrides };
 }

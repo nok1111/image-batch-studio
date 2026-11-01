@@ -84,8 +84,10 @@ export function Workspace({ module }: { module: ModuleId }) {
       : undefined;
   const [previewError, setPreviewError] = useState<string | null>(null);
 
+  const wantsRename =
+    module === "renamer" || (module === "pipeline" && o.pipelineUse.rename);
   const previewKey =
-    module === "renamer" && outputDir && q.items.length > 0 && !q.running
+    wantsRename && outputDir && q.items.length > 0 && !q.running
       ? JSON.stringify(
           buildJob(
             module,
@@ -303,7 +305,7 @@ export function Workspace({ module }: { module: ModuleId }) {
         )}
       </Card>
 
-      {module === "renamer" && q.items.length > 0 && !q.running && (
+      {wantsRename && q.items.length > 0 && !q.running && (
         <p
           className={cn(
             "text-xs",

@@ -1050,6 +1050,21 @@ export function WatermarkPanel({ o, set, disabled, items }: PanelProps) {
 export function PipelinePanel(props: PanelProps) {
   const { t } = useTranslation();
   const { o, set, disabled } = props;
+  // Each embedded panel would otherwise read/write the shared presetId;
+  // scope it per step so resize and watermark presets can't collide.
+  const scopePreset = (
+    field: "pipelineResizePresetId" | "pipelineWmPresetId",
+  ): PanelProps => ({
+    ...props,
+    o: { ...o, presetId: o[field] },
+    set: (patch) => {
+      const { presetId, ...rest } = patch;
+      set({
+        ...rest,
+        ...(presetId !== undefined ? { [field]: presetId } : {}),
+      });
+    },
+  });
   const section = (
     key: "transform" | "resize" | "watermark" | "rename",
     content: React.ReactNode,
@@ -1075,8 +1090,8 @@ export function PipelinePanel(props: PanelProps) {
       <FormatField {...props} formats={ALL_FORMATS} allowSource />
       <CommonEncoding {...props} />
       {section("transform", <CropRotatePanel {...props} />)}
-      {section("resize", <ResizerPanel {...props} />)}
-      {section("watermark", <WatermarkPanel {...props} />)}
+      {section("resize", <ResizerPanel {...scopePreset("pipelineResizePresetId")} />)}
+      {section("watermark", <WatermarkPanel {...scopePreset("pipelineWmPresetId")} />)}
       {section("rename", <RenamerPanel {...props} />)}
     </>
   );
