@@ -64,6 +64,7 @@ fn job(inputs: &[PathBuf], out: &Path, format: ImageFormat, conflict: ConflictPo
             target_size: None,
             conflict,
         },
+        transform: None,
         resize: None,
         rename: None,
     }

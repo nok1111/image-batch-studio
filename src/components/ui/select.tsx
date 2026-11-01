@@ -14,6 +14,7 @@ interface SelectProps<T extends string> {
   id?: string;
   className?: string;
   "aria-label"?: string;
+  disabled?: boolean;
 }
 
 export function Select<T extends string>({
@@ -22,10 +23,11 @@ export function Select<T extends string>({
   options,
   id,
   className,
+  disabled,
   ...rest
 }: SelectProps<T>) {
   return (
-    <SelectPrimitive.Root value={value} onValueChange={(v) => onValueChange(v as T)}>
+    <SelectPrimitive.Root value={value} disabled={disabled} onValueChange={(v) => onValueChange(v as T)}>
       <SelectPrimitive.Trigger
         id={id}
         aria-label={rest["aria-label"]}

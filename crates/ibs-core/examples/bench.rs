@@ -57,6 +57,7 @@ fn main() {
             target_size: None,
             conflict: ConflictPolicy::Rename,
         },
+        transform: None,
         resize: None,
         rename: None,
     };

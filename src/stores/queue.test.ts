@@ -20,7 +20,8 @@ const scan = (names: string[], extra: Partial<ScanResult> = {}): ScanResult => (
 
 const job = {
   output: { dir: "/out", mode: { kind: "convert", format: "jpeg" }, quality: 80, lossless: false, metadata: "strip", targetSize: null, conflict: "rename" },
-  resize: null,
+  transform: null,
+      resize: null,
   rename: null,
 } as const;
 

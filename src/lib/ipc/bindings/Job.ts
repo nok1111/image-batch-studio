@@ -2,11 +2,16 @@
 import type { OutputSpec } from "./OutputSpec";
 import type { RenameSpec } from "./RenameSpec";
 import type { ResizeSpec } from "./ResizeSpec";
+import type { TransformSpec } from "./TransformSpec";
 
 /**
  * A batch: every input goes through the same processing and output spec.
  */
-export type Job = { inputs: Array<string>, output: OutputSpec, resize: ResizeSpec | null, 
+export type Job = { inputs: Array<string>, output: OutputSpec, 
+/**
+ * Crop / rotate / flip applied before resize.
+ */
+transform: TransformSpec | null, resize: ResizeSpec | null, 
 /**
  * Output file names; without it outputs keep the input's name.
  */

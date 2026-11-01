@@ -144,7 +144,8 @@
       "verify": "Output failed verification",
       "wouldOverwriteSource": "Would overwrite the original",
       "outputUnsupported": "Format not possible for this image",
-      "internal": "Unexpected error"
+      "internal": "Unexpected error",
+      "cropOutside": "Crop does not touch this image"
     },
     "warnings": {
       "firstFrameOnly": "Animated: first frame only",
@@ -218,5 +219,18 @@
     "unavailable": "This format can't be shown here.",
     "split": "Comparison divider",
     "hint": "Drag over the image to move the divider."
+  },
+  "cropRotate": {
+    "rotation": "Rotation",
+    "flipH": "Flip horizontally",
+    "flipV": "Flip vertically",
+    "reference": "Crop preview image",
+    "noFiles": "Add files to draw the crop",
+    "editor": "Crop editor",
+    "resetCrop": "Full image",
+    "hint": "Applied to every file; outside parts are cut off."
+  },
+  "meta": {
+    "info": "Removes EXIF (camera, GPS), XMP, ICC profile and comments from every file. Pixel data is untouched; formats that keep nothing extra are re-encoded cleanly."
   }
 }

@@ -144,7 +144,8 @@
       "verify": "La salida no superó la verificación",
       "wouldOverwriteSource": "Sobrescribiría el original",
       "outputUnsupported": "Formato no posible para esta imagen",
-      "internal": "Error inesperado"
+      "internal": "Error inesperado",
+      "cropOutside": "El recorte no toca esta imagen"
     },
     "warnings": {
       "firstFrameOnly": "Animada: solo el primer fotograma",
@@ -218,5 +219,18 @@
     "unavailable": "Este formato no se puede mostrar aquí.",
     "split": "Divisor de la comparación",
     "hint": "Arrastra sobre la imagen para mover el divisor."
+  },
+  "cropRotate": {
+    "rotation": "Rotación",
+    "flipH": "Voltear horizontal",
+    "flipV": "Voltear vertical",
+    "reference": "Imagen para dibujar el recorte",
+    "noFiles": "Añade archivos para dibujar el recorte",
+    "editor": "Editor de recorte",
+    "resetCrop": "Imagen completa",
+    "hint": "Se aplica a todos los archivos; lo que quede fuera se recorta."
+  },
+  "meta": {
+    "info": "Quita EXIF (cámara, GPS), XMP, perfil ICC y comentarios de todos los archivos. Los píxeles no se tocan."
   }
 }

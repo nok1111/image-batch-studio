@@ -13,14 +13,25 @@ const FLUSH_INTERVAL: Duration = Duration::from_millis(100);
 
 /// Expands dropped/selected files and folders off the main thread.
 #[tauri::command]
-pub async fn scan_inputs(paths: Vec<String>) -> CommandResult<ScanResult> {
+pub async fn scan_inputs(
+    state: State<'_, AppState>,
+    paths: Vec<String>,
+) -> CommandResult<ScanResult> {
     let paths: Vec<PathBuf> = paths.into_iter().map(PathBuf::from).collect();
-    tauri::async_runtime::spawn_blocking(move || ibs_core::scan(&paths, &AtomicBool::new(false)))
-        .await
-        .map_err(|e| CommandError {
-            code: "internal",
-            message: e.to_string(),
-        })
+    let scanned = tauri::async_runtime::spawn_blocking(move || {
+        ibs_core::scan(&paths, &AtomicBool::new(false))
+    })
+    .await
+    .map_err(|e| CommandError {
+        code: "internal",
+        message: e.to_string(),
+    })?;
+    // Only files the scan accepted as supported inputs may be shown
+    // (crop editor, comparison) — not arbitrary paths the caller passes.
+    if let Ok(mut viewable) = state.viewable.lock() {
+        viewable.extend(scanned.files.iter().map(|f| PathBuf::from(&f.path)));
+    }
+    Ok(scanned)
 }
 
 /// Output names a batch would produce (renamer preview, collision check).

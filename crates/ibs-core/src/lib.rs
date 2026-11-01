@@ -11,6 +11,7 @@ pub mod job;
 pub mod naming;
 pub mod output;
 pub mod resize;
+pub mod transform;
 
 pub use engine::{preview, run, JobError, JobEvent, JobSummary, PlannedAction, PlannedOutput};
 pub use error::{FileError, FileErrorCode};
@@ -19,3 +20,4 @@ pub use intake::{scan, InputFile, ScanResult};
 pub use job::{FileResult, FileStatus, FileWarning, Job, MetadataPolicy, OutputMode, OutputSpec};
 pub use naming::RenameSpec;
 pub use resize::{ResizeMode, ResizeSpec};
+pub use transform::{CropSpec, TransformSpec};

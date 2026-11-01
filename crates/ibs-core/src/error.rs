@@ -18,6 +18,8 @@ pub enum FileErrorCode {
     Verify,
     /// The output would have replaced one of the batch's source files.
     WouldOverwriteSource,
+    /// The requested crop does not intersect this image.
+    CropOutside,
     /// The output format cannot be produced from this image or in this build.
     OutputUnsupported,
     Internal,

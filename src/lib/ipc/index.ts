@@ -18,6 +18,8 @@ export type { FileStatus } from "./bindings/FileStatus";
 export type { FileWarning } from "./bindings/FileWarning";
 export type { InputFile } from "./bindings/InputFile";
 export type { Job } from "./bindings/Job";
+export type { CropSpec } from "./bindings/CropSpec";
+export type { TransformSpec } from "./bindings/TransformSpec";
 export type { JobEvent } from "./bindings/JobEvent";
 export type { JobSummary } from "./bindings/JobSummary";
 export type { OutputSpec } from "./bindings/OutputSpec";
