@@ -248,7 +248,7 @@ export function Workspace({ module }: { module: ModuleId }) {
             items={q.items}
             running={q.running}
             onRemove={q.removeItem}
-            previews={module === "renamer" ? (previews ?? []) : undefined}
+            previews={wantsRename ? (previews ?? []) : undefined}
             renamed={q.lastMode === "copyOriginal"}
             onCompare={
               module === "renamer"
