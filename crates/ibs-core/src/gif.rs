@@ -77,6 +77,16 @@ pub fn strip_metadata(src: &[u8]) -> Result<Vec<u8>, FileError> {
                 let end = skip_sub_blocks(src, i + 2)?;
                 if !drop {
                     out.extend_from_slice(&src[i..end]);
+                } else if label == 0x01 {
+                    // A GCE binds to the next graphic — which can be this
+                    // plain-text block. Drop it too or it would rebind to the
+                    // following image and change its delay/disposal.
+                    if out.len() >= 8
+                        && out[out.len() - 8..out.len() - 5] == [0x21, 0xF9, 0x04]
+                        && out[out.len() - 1] == 0x00
+                    {
+                        out.truncate(out.len() - 8);
+                    }
                 }
                 i = end;
             }
