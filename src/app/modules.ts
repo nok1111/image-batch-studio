@@ -86,7 +86,7 @@ export const TOOL_MODULES: ToolModule[] = [
     id: "analyzer",
     path: "/analyzer",
     icon: ScanSearch,
-    available: false,
+    available: true,
     accent: "teal",
   },
 ];

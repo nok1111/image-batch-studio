@@ -2,6 +2,7 @@ import { Channel, invoke } from "@tauri-apps/api/core";
 import type { Settings } from "./bindings/Settings";
 import type { Job } from "./bindings/Job";
 import type { JobEvent } from "./bindings/JobEvent";
+import type { AnalyzeEvent } from "./bindings/AnalyzeEvent";
 import type { ScanResult } from "./bindings/ScanResult";
 import type { PlannedOutput } from "./bindings/PlannedOutput";
 import type { ResizePreset } from "./bindings/ResizePreset";
@@ -32,6 +33,9 @@ export type { RenameSpec } from "./bindings/RenameSpec";
 export type { ResizeMode } from "./bindings/ResizeMode";
 export type { ResizePreset } from "./bindings/ResizePreset";
 export type { ResizeSpec } from "./bindings/ResizeSpec";
+export type { AnalysisResult } from "./bindings/AnalysisResult";
+export type { AnalyzeEvent } from "./bindings/AnalyzeEvent";
+export type { FileAnalysis } from "./bindings/FileAnalysis";
 
 /** Shape of errors returned by Rust commands (see src-tauri/src/error.rs). */
 export interface CommandError {
@@ -66,6 +70,15 @@ export const ipc = {
     return invoke<void>("start_job", { job, onEvent: channel });
   },
   cancelJob: () => invoke<boolean>("cancel_job"),
+  analyzeFiles: (paths: string[], onEvent: (event: AnalyzeEvent) => void) => {
+    const channel = new Channel<AnalyzeEvent>();
+    channel.onmessage = onEvent;
+    return invoke<void>("analyze_files", { paths, onEvent: channel });
+  },
+  exportPresets: (path: string, contents: string) =>
+    invoke<void>("export_presets", { path, contents }),
+  importPresets: (path: string) =>
+    invoke<string>("import_presets", { path }),
   previewJob: (job: Job) => invoke<PlannedOutput[]>("preview_job", { job }),
   loadImage: (path: string) => invoke<ArrayBuffer>("load_image", { path }),
   listResizePresets: () => invoke<ResizePreset[]>("list_resize_presets"),

@@ -97,7 +97,14 @@
     "reset": "Restaurar padrões",
     "saved": "Salvo",
     "saveError": "Não foi possível salvar as configurações: {{message}}",
-    "loadError": "Não foi possível carregar as configurações: {{message}}"
+    "loadError": "Não foi possível carregar as configurações: {{message}}",
+    "presets": "Presets",
+    "presetsHint": "Exporte as opções dos módulos e os presets de redimensionamento, ou importe-os de outra máquina.",
+    "presetsExport": "Exportar…",
+    "presetsImport": "Importar…",
+    "presetsExported": "Presets exportados.",
+    "presetsImported": "Importadas opções de {{modules}} módulos e {{count}} presets de redimensionamento.",
+    "presetsInvalid": "Não é um arquivo de presets válido"
   },
   "workspace": {
     "addFiles": "Adicionar arquivos",
@@ -232,5 +239,26 @@
   },
   "meta": {
     "info": "Remove EXIF (câmera, GPS), XMP, perfil ICC e comentários de todos os arquivos. Os pixels não são alterados."
+  },
+  "analyzer": {
+    "start_one": "Analisar {{count}} imagem",
+    "start_other": "Analisar {{count}} imagens",
+    "yes": "sim",
+    "colName": "Nome",
+    "colDims": "Dimensões",
+    "colFormat": "Formato",
+    "colColor": "Cor",
+    "colAlpha": "Alfa",
+    "colAnim": "Anim.",
+    "colSize": "Tamanho",
+    "colEst": "WebP est.",
+    "statAnalyzed": "Analisadas",
+    "statSize": "Tamanho total",
+    "statEst": "WebP q80 est.",
+    "statSaving": "Economia est.",
+    "statAlpha": "Com alfa",
+    "statAnimated": "Animadas",
+    "statExif": "Com EXIF",
+    "hint": "Somente leitura: nada é gravado. A estimativa é cada imagem recodificada como WebP com perda em qualidade 80."
   }
 }

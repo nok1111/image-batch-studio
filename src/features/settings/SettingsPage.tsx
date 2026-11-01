@@ -1,7 +1,7 @@
 import { useEffect, useState, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
-import { open } from "@tauri-apps/plugin-dialog";
-import { Check, FolderOpen, Info, Lock, RotateCcw, X } from "lucide-react";
+import { open, save } from "@tauri-apps/plugin-dialog";
+import { Check, Download, FolderOpen, Info, Lock, RotateCcw, Upload, X } from "lucide-react";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -10,7 +10,10 @@ import { Segmented } from "@/components/ui/segmented";
 import { Slider } from "@/components/ui/slider";
 import { LOCALE_NATIVE_NAMES, SUPPORTED_LOCALES } from "@/i18n";
 import type { ConflictPolicy, ImageFormat, Language, Theme } from "@/lib/ipc";
+import { errorMessage, ipc } from "@/lib/ipc";
+import { useQueueStore } from "@/stores/queue";
 import { useSettingsStore } from "@/stores/settings";
+import { buildPresetsFile, parsePresetsFile } from "./presets";
 
 const FORMATS: { value: ImageFormat; label: string }[] = [
   { value: "jpeg", label: "JPG" },
@@ -30,6 +33,7 @@ export function SettingsPage() {
   const { settings, appInfo, update, reset, saving, error, lastSavedAt } = useSettingsStore();
   const [quality, setQuality] = useState(settings?.defaultQuality ?? 85);
   const [concurrency, setConcurrency] = useState(settings?.concurrency ?? 0);
+  const [presetsMsg, setPresetsMsg] = useState<{ ok: boolean; text: string } | null>(null);
 
   useEffect(() => {
     if (settings) {
@@ -46,6 +50,57 @@ export function SettingsPage() {
   const pickOutputDir = async () => {
     const dir = await open({ directory: true, multiple: false, defaultPath: settings.defaultOutputDir ?? undefined });
     if (typeof dir === "string") await update({ defaultOutputDir: dir });
+  };
+
+  const exportPresets = async () => {
+    setPresetsMsg(null);
+    const path = await save({
+      defaultPath: "image-batch-studio-presets.json",
+      filters: [{ name: "JSON", extensions: ["json"] }],
+    });
+    if (!path) return;
+    try {
+      const resizePresets = await ipc.listResizePresets();
+      const file = buildPresetsFile(useQueueStore.getState().options, resizePresets);
+      await ipc.exportPresets(path, JSON.stringify(file, null, 2));
+      setPresetsMsg({ ok: true, text: t("settings.presetsExported") });
+    } catch (e) {
+      setPresetsMsg({ ok: false, text: errorMessage(e) });
+    }
+  };
+
+  const importPresets = async () => {
+    setPresetsMsg(null);
+    const picked = await open({
+      multiple: false,
+      filters: [{ name: "JSON", extensions: ["json"] }],
+    });
+    if (typeof picked !== "string") return;
+    try {
+      const file = parsePresetsFile(await ipc.importPresets(picked));
+      const q = useQueueStore.getState();
+      let modules = 0;
+      for (const [mod, opts] of Object.entries(file.moduleOptions)) {
+        if (opts) {
+          q.setOptions(mod as Parameters<typeof q.setOptions>[0], opts);
+          modules++;
+        }
+      }
+      for (const preset of file.resizePresets) {
+        await ipc.saveResizePreset({ ...preset, id: null });
+      }
+      setPresetsMsg({
+        ok: true,
+        text: t("settings.presetsImported", { modules, count: file.resizePresets.length }),
+      });
+    } catch (e) {
+      setPresetsMsg({
+        ok: false,
+        text: e instanceof SyntaxError || (e instanceof Error && e.message === "unsupported presets file")
+          ? t("settings.presetsInvalid")
+          : errorMessage(e),
+      });
+    }
   };
 
   return (
@@ -173,6 +228,26 @@ export function SettingsPage() {
               ]}
             />
           </Row>
+        </Section>
+
+        <Section title={t("settings.presets")}>
+          <Row label={t("settings.presets")} hint={t("settings.presetsHint")}>
+            <div className="flex items-center gap-2">
+              <Button variant="secondary" onClick={() => void exportPresets()}>
+                <Download />
+                {t("settings.presetsExport")}
+              </Button>
+              <Button variant="secondary" onClick={() => void importPresets()}>
+                <Upload />
+                {t("settings.presetsImport")}
+              </Button>
+            </div>
+          </Row>
+          {presetsMsg && (
+            <p className={presetsMsg.ok ? "pb-3 text-xs text-success" : "pb-3 text-xs text-danger"}>
+              {presetsMsg.text}
+            </p>
+          )}
         </Section>
 
         <Section title={t("settings.license")}>

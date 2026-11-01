@@ -1,6 +1,8 @@
 use crate::error::{CommandError, CommandResult};
 use crate::state::AppState;
-use ibs_core::{FileResult, FileStatus, Job, JobEvent, PlannedOutput, ScanResult};
+use ibs_core::{
+    AnalysisResult, AnalyzeEvent, FileResult, FileStatus, Job, JobEvent, PlannedOutput, ScanResult,
+};
 use std::path::PathBuf;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{mpsc, Arc};
@@ -111,7 +113,9 @@ pub fn start_job(
             let (tx, rx) = mpsc::channel::<FileResult>();
             let forwarder = {
                 let channel = on_event.clone();
-                std::thread::spawn(move || forward_batched(rx, &channel))
+                std::thread::spawn(move || {
+                    forward_batched(rx, &channel, |results| JobEvent::Progress { results })
+                })
             };
             let outcome = ibs_core::run(&job, concurrency, &cancel, |r| {
                 if let (FileStatus::Done, Some(out)) = (&r.status, &r.output) {
@@ -145,7 +149,10 @@ pub fn start_job(
     Ok(())
 }
 
-fn forward_batched(rx: mpsc::Receiver<FileResult>, channel: &Channel<JobEvent>) {
+fn forward_batched<T, E>(rx: mpsc::Receiver<T>, channel: &Channel<E>, wrap: impl Fn(Vec<T>) -> E)
+where
+    E: serde::Serialize + Clone + Send + 'static,
+{
     let mut buf = Vec::new();
     let mut last = Instant::now();
     loop {
@@ -155,15 +162,100 @@ fn forward_batched(rx: mpsc::Receiver<FileResult>, channel: &Channel<JobEvent>) 
             Err(mpsc::RecvTimeoutError::Disconnected) => break,
         }
         if !buf.is_empty() && last.elapsed() >= FLUSH_INTERVAL {
-            let _ = channel.send(JobEvent::Progress {
-                results: std::mem::take(&mut buf),
-            });
+            let _ = channel.send(wrap(std::mem::take(&mut buf)));
             last = Instant::now();
         }
     }
     if !buf.is_empty() {
-        let _ = channel.send(JobEvent::Progress { results: buf });
+        let _ = channel.send(wrap(buf));
     }
+}
+
+/// Inspects queued images without writing anything: streams `AnalyzeEvent`s.
+/// Shares the single-job slot with `start_job`, so `cancel_job` stops it too.
+#[tauri::command]
+pub fn analyze_files(
+    app: AppHandle,
+    state: State<'_, AppState>,
+    paths: Vec<String>,
+    on_event: Channel<AnalyzeEvent>,
+) -> CommandResult<()> {
+    let concurrency = state.store.settings()?.concurrency as usize;
+    let cancel = Arc::new(AtomicBool::new(false));
+    {
+        let mut slot = state.running_job.lock().map_err(|_| poisoned())?;
+        if slot.is_some() {
+            return Err(CommandError {
+                code: "busy",
+                message: "a batch is already running".into(),
+            });
+        }
+        *slot = Some(cancel.clone());
+    }
+    let paths: Vec<PathBuf> = paths.into_iter().map(PathBuf::from).collect();
+    let spawned = std::thread::Builder::new()
+        .name("ibs-analyze".into())
+        .spawn(move || {
+            let (tx, rx) = mpsc::channel::<AnalysisResult>();
+            let forwarder = {
+                let channel = on_event.clone();
+                std::thread::spawn(move || {
+                    forward_batched(rx, &channel, |results| AnalyzeEvent::Progress { results })
+                })
+            };
+            let outcome = ibs_core::analyze(&paths, concurrency, &cancel, |r| {
+                let _ = tx.send(r);
+            });
+            drop(tx);
+            let _ = forwarder.join();
+            let _ = on_event.send(match outcome {
+                Ok(summary) => AnalyzeEvent::Finished { summary },
+                Err(e) => AnalyzeEvent::Aborted {
+                    message: e.to_string(),
+                },
+            });
+            if let Ok(mut slot) = app.state::<AppState>().running_job.lock() {
+                *slot = None;
+            }
+        });
+    if let Err(e) = spawned {
+        if let Ok(mut slot) = state.running_job.lock() {
+            *slot = None;
+        }
+        return Err(CommandError {
+            code: "internal",
+            message: e.to_string(),
+        });
+    }
+    Ok(())
+}
+
+/// Writes the presets JSON the user picked with the save dialog.
+#[tauri::command]
+pub fn export_presets(path: String, contents: String) -> CommandResult<()> {
+    std::fs::write(&path, contents).map_err(|e| CommandError {
+        code: "io",
+        message: e.to_string(),
+    })
+}
+
+/// Reads a presets JSON the user picked with the open dialog.
+#[tauri::command]
+pub fn import_presets(path: String) -> CommandResult<String> {
+    let data = std::fs::read(&path).map_err(|e| CommandError {
+        code: "io",
+        message: e.to_string(),
+    })?;
+    if data.len() > 4 * 1024 * 1024 {
+        return Err(CommandError {
+            code: "io",
+            message: "file too large to be a presets file".into(),
+        });
+    }
+    String::from_utf8(data).map_err(|_| CommandError {
+        code: "io",
+        message: "not a UTF-8 presets file".into(),
+    })
 }
 
 /// Requests cancellation of the running batch. Returns false if none is running.
