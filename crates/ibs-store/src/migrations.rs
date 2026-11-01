@@ -30,6 +30,9 @@ const MIGRATIONS: &[&str] = &[
         spec     TEXT NOT NULL,
         position INTEGER NOT NULL
     );"#,
+    r#"CREATE TABLE watermark_images (
+        path TEXT PRIMARY KEY NOT NULL
+    );"#,
 ];
 
 pub const LATEST: usize = MIGRATIONS.len();

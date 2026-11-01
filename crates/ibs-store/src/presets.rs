@@ -192,12 +192,44 @@ impl Store {
         conn.execute("DELETE FROM watermark_presets WHERE id = ?1", [id])?;
         Ok(())
     }
+
+    /// Logo paths the user explicitly picked through the file dialog.
+    /// `register_watermark_image` trusts only these.
+    pub fn watermark_image_paths(&self) -> Result<Vec<String>, StoreError> {
+        let conn = self.conn.lock().map_err(|_| StoreError::Poisoned)?;
+        let mut stmt = conn.prepare("SELECT path FROM watermark_images")?;
+        let rows = stmt
+            .query_map([], |r| r.get::<_, String>(0))?
+            .collect::<Result<Vec<_>, _>>()?;
+        Ok(rows)
+    }
+
+    pub fn add_watermark_image(&self, path: &str) -> Result<(), StoreError> {
+        let conn = self.conn.lock().map_err(|_| StoreError::Poisoned)?;
+        conn.execute(
+            "INSERT OR IGNORE INTO watermark_images (path) VALUES (?1)",
+            [path],
+        )?;
+        Ok(())
+    }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
     use ibs_core::ResizeMode;
+
+    #[test]
+    fn watermark_images_round_trip() {
+        let store = crate::Store::open_in_memory().unwrap();
+        store.add_watermark_image("/a/logo.png").unwrap();
+        store.add_watermark_image("/a/logo.png").unwrap();
+        store.add_watermark_image("/b/mark.webp").unwrap();
+        assert_eq!(
+            store.watermark_image_paths().unwrap(),
+            vec!["/a/logo.png".to_string(), "/b/mark.webp".to_string()]
+        );
+    }
 
     fn spec(w: u32) -> ResizeSpec {
         ResizeSpec {
