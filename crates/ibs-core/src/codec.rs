@@ -57,6 +57,10 @@ pub fn decode(path: &Path) -> Result<Decoded, FileError> {
             "not a recognized image file",
         ));
     }
+    if reader.format() == Some(image::ImageFormat::Avif) {
+        // The `image` crate has no pure-Rust AVIF decoder.
+        return decode_avif(path);
+    }
     let is_gif = reader.format() == Some(image::ImageFormat::Gif);
     reader.limits(limits());
     let mut decoder = reader.into_decoder().map_err(map_decode_error)?;
@@ -75,6 +79,73 @@ pub fn decode(path: &Path) -> Result<Decoded, FileError> {
         icc,
         exif,
     })
+}
+
+/// Decodes an AVIF with zenavif (pure-Rust rav1d), applying `irot`/`imir`.
+fn decode_avif(path: &Path) -> Result<Decoded, FileError> {
+    let data = std::fs::read(path).map_err(FileError::io)?;
+    let animated = zenavif::detect::probe(&data)
+        .map(|p| p.has_animation)
+        .unwrap_or(false);
+    let config = zenavif::DecoderConfig::new()
+        .prefer_8bit(true)
+        .frame_size_limit(MAX_ALLOC as u32 / 4);
+    let mut decoder = zenavif::ManagedAvifDecoder::new(&data, &config)
+        .map_err(avif_error)?;
+    let (buf, info) = decoder
+        .decode_full(&zenavif::Unstoppable)
+        .map_err(avif_error)?;
+    let (w, h) = (buf.width(), buf.height());
+    if w > MAX_DIMENSION || h > MAX_DIMENSION {
+        return Err(FileError::new(
+            FileErrorCode::TooLarge,
+            format!("{w}×{h} exceeds the {MAX_DIMENSION}px limit"),
+        ));
+    }
+    let bytes = buf.as_slice().contiguous_bytes().into_owned();
+    let desc = buf.descriptor();
+    let mut image = if desc.layout_compatible(zenpixels::PixelDescriptor::RGBA8) {
+        DynamicImage::ImageRgba8(
+            image::RgbaImage::from_raw(w, h, bytes).ok_or_else(avif_decode_err)?,
+        )
+    } else if desc.layout_compatible(zenpixels::PixelDescriptor::RGB8) {
+        DynamicImage::ImageRgb8(
+            RgbImage::from_raw(w, h, bytes).ok_or_else(avif_decode_err)?,
+        )
+    } else {
+        return Err(FileError::new(
+            FileErrorCode::Unsupported,
+            format!("unsupported AVIF pixel format: {desc:?}"),
+        ));
+    };
+    if let Some(rot) = info.rotation {
+        image = match rot.angle {
+            90 => image.rotate90(),
+            180 => image.rotate180(),
+            270 => image.rotate270(),
+            _ => image,
+        };
+    }
+    if let Some(mirror) = info.mirror {
+        image = match mirror.axis {
+            0 => image.fliph(),
+            _ => image.flipv(),
+        };
+    }
+    Ok(Decoded {
+        image,
+        animated,
+        icc: info.icc_profile,
+        exif: info.exif,
+    })
+}
+
+fn avif_error(e: impl std::fmt::Display) -> FileError {
+    FileError::new(FileErrorCode::Decode, e.to_string())
+}
+
+fn avif_decode_err() -> FileError {
+    FileError::new(FileErrorCode::Decode, "malformed AVIF pixel buffer")
 }
 
 fn is_animated_gif(path: &Path) -> bool {
@@ -381,9 +452,8 @@ pub fn encode_to_size(
 }
 
 /// A written file counts as successful only if it is non-empty and decodes
-/// back to the expected dimensions. AVIF (no decoder in this build) is checked
-/// through its container header instead.
-pub fn verify(path: &Path, format: ImageFormat, width: u32, height: u32) -> Result<(), FileError> {
+/// back to the expected dimensions.
+pub fn verify(path: &Path, _format: ImageFormat, width: u32, height: u32) -> Result<(), FileError> {
     let len = std::fs::metadata(path).map_err(FileError::io)?.len();
     if len == 0 {
         return Err(FileError::new(
@@ -391,22 +461,10 @@ pub fn verify(path: &Path, format: ImageFormat, width: u32, height: u32) -> Resu
             "output file is empty",
         ));
     }
-    let dims = if format == ImageFormat::Avif {
-        let data = std::fs::read(path).map_err(FileError::io)?;
-        avif_dimensions(&data).ok_or_else(|| {
-            FileError::new(FileErrorCode::Verify, "output is not a valid AVIF file")
-        })?
-    } else {
-        let img = decode(path)
-            .map_err(|e| {
-                FileError::new(
-                    FileErrorCode::Verify,
-                    format!("output does not decode: {e}"),
-                )
-            })?
-            .image;
-        (img.width(), img.height())
-    };
+    let img = decode(path)
+        .map_err(|e| FileError::new(FileErrorCode::Verify, format!("output does not decode: {e}")))?
+        .image;
+    let dims = (img.width(), img.height());
     if dims != (width, height) {
         return Err(FileError::new(
             FileErrorCode::Verify,
@@ -434,10 +492,8 @@ pub fn avif_dimensions(data: &[u8]) -> Option<(u32, u32)> {
 /// Largest file [`display_bytes`] will load for an on-screen comparison.
 pub const MAX_DISPLAY_BYTES: u64 = 256 * 1024 * 1024;
 
-/// Bytes a webview can show for `path`. Formats browsers render natively are
-/// returned untouched (so the viewer sees the exact encoded result); TIFF and
-/// ICO are decoded and re-encoded losslessly as PNG, and so is GIF, so an
-/// animation shows the same first frame the engine processes.
+/// A written file counts as successful only if it is non-empty and decodes
+/// back to the expected dimensions.
 pub fn display_bytes(path: &Path) -> Result<Vec<u8>, FileError> {
     let ext = path
         .extension()
@@ -518,6 +574,28 @@ mod tests {
         let back = DynamicImage::from_decoder(dec).unwrap();
         assert_eq!((back.width(), back.height()), (33, 17));
         assert!(back.color().has_alpha());
+    }
+
+    #[test]
+    fn avif_input_decodes() {
+        let img = DynamicImage::ImageRgba8(RgbaImage::from_fn(37, 23, |x, y| {
+            Rgba([x as u8, y as u8, 200, if x < 10 { 128 } else { 255 }])
+        }));
+        let o = EncodeOptions {
+            format: ImageFormat::Avif,
+            quality: 80,
+            lossless: false,
+            icc: None,
+            exif: None,
+        };
+        let bytes = encode(&img, &o).unwrap().bytes;
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("in.avif");
+        std::fs::write(&path, &bytes).unwrap();
+        let dec = decode(&path).unwrap();
+        assert_eq!((dec.image.width(), dec.image.height()), (37, 23));
+        assert!(!dec.animated);
+        assert!(dec.image.color().has_alpha());
     }
 
     #[test]

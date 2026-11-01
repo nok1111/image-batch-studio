@@ -45,6 +45,7 @@ const INPUT_EXTENSIONS = [
   "tiff",
   "gif",
   "ico",
+  "avif",
 ];
 
 const PANELS = {
