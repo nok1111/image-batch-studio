@@ -258,7 +258,7 @@ export function Workspace({ module }: { module: ModuleId }) {
       </Card>
 
       <Card className="flex flex-wrap items-end gap-x-6 gap-y-4 px-5 py-4">
-        <Panel module={module} o={o} set={set} disabled={q.running} />
+        <Panel module={module} o={o} set={set} disabled={q.running} items={q.items} />
       </Card>
 
       <Card className="flex flex-wrap items-end gap-6 px-5 py-4">

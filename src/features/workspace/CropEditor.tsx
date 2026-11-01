@@ -124,11 +124,14 @@ export function CropEditor({
     const b = toSource(p);
     let c = d.base;
     if (d.mode === "new") {
+      // Pixels are inclusive: dragging to the far edge must include it.
+      const x = Math.min(a.x, b.x);
+      const y = Math.min(a.y, b.y);
       c = {
-        x: Math.min(a.x, b.x),
-        y: Math.min(a.y, b.y),
-        width: Math.max(1, Math.abs(b.x - a.x)),
-        height: Math.max(1, Math.abs(b.y - a.y)),
+        x,
+        y,
+        width: clamp(Math.abs(b.x - a.x) + 1, 1, nat[0] - x),
+        height: clamp(Math.abs(b.y - a.y) + 1, 1, nat[1] - y),
       };
     } else if (d.mode === "move") {
       c = {
