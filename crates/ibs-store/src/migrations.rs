@@ -24,6 +24,12 @@ const MIGRATIONS: &[&str] = &[
         ('YouTube — thumbnail', '{"mode":"fill","width":1280,"height":720,"percent":100,"allowUpscale":false}', 6),
         ('Full HD (fit)', '{"mode":"fit","width":1920,"height":1080,"percent":100,"allowUpscale":false}', 7),
         ('Web — 1200 px wide', '{"mode":"width","width":1200,"height":0,"percent":100,"allowUpscale":false}', 8);"#,
+    r#"CREATE TABLE watermark_presets (
+        id       INTEGER PRIMARY KEY AUTOINCREMENT,
+        name     TEXT NOT NULL,
+        spec     TEXT NOT NULL,
+        position INTEGER NOT NULL
+    );"#,
 ];
 
 pub const LATEST: usize = MIGRATIONS.len();

@@ -1,5 +1,5 @@
 use crate::{Store, StoreError};
-use ibs_core::ResizeSpec;
+use ibs_core::{ResizeSpec, WatermarkSpec};
 use serde::{Deserialize, Serialize};
 use ts_rs::TS;
 
@@ -15,6 +15,18 @@ pub struct ResizePreset {
     pub id: Option<i64>,
     pub name: String,
     pub spec: ResizeSpec,
+}
+
+/// Saved watermark configuration.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase")]
+#[ts(export)]
+pub struct WatermarkPreset {
+    /// `None` when creating a new preset.
+    #[ts(type = "number | null")]
+    pub id: Option<i64>,
+    pub name: String,
+    pub spec: WatermarkSpec,
 }
 
 impl Store {
@@ -95,6 +107,89 @@ impl Store {
     pub fn delete_resize_preset(&self, id: i64) -> Result<(), StoreError> {
         let conn = self.conn.lock().map_err(|_| StoreError::Poisoned)?;
         conn.execute("DELETE FROM resize_presets WHERE id = ?1", [id])?;
+        Ok(())
+    }
+
+    /// Watermark presets in display order; malformed specs are skipped.
+    pub fn watermark_presets(&self) -> Result<Vec<WatermarkPreset>, StoreError> {
+        let conn = self.conn.lock().map_err(|_| StoreError::Poisoned)?;
+        let mut stmt =
+            conn.prepare("SELECT id, name, spec FROM watermark_presets ORDER BY position, id")?;
+        let rows = stmt.query_map([], |r| {
+            Ok((
+                r.get::<_, i64>(0)?,
+                r.get::<_, String>(1)?,
+                r.get::<_, String>(2)?,
+            ))
+        })?;
+        let mut out = Vec::new();
+        for row in rows {
+            let (id, name, spec) = row?;
+            if let Ok(spec) = serde_json::from_str::<WatermarkSpec>(&spec) {
+                out.push(WatermarkPreset {
+                    id: Some(id),
+                    name,
+                    spec,
+                });
+            }
+        }
+        Ok(out)
+    }
+
+    /// Inserts (no id) or updates a watermark preset; returns it with its id.
+    pub fn save_watermark_preset(
+        &self,
+        preset: &WatermarkPreset,
+    ) -> Result<WatermarkPreset, StoreError> {
+        let name = preset.name.trim().to_string();
+        if name.is_empty() || name.chars().count() > MAX_PRESET_NAME {
+            return Err(StoreError::Invalid {
+                field: "name",
+                reason: format!("must be 1–{MAX_PRESET_NAME} characters"),
+            });
+        }
+        preset
+            .spec
+            .validate()
+            .map_err(|reason| StoreError::Invalid {
+                field: "spec",
+                reason,
+            })?;
+        let spec = serde_json::to_string(&preset.spec)?;
+        let conn = self.conn.lock().map_err(|_| StoreError::Poisoned)?;
+        let id = match preset.id {
+            Some(id) => {
+                let n = conn.execute(
+                    "UPDATE watermark_presets SET name = ?1, spec = ?2 WHERE id = ?3",
+                    (&name, &spec, id),
+                )?;
+                if n == 0 {
+                    return Err(StoreError::Invalid {
+                        field: "id",
+                        reason: "preset not found".into(),
+                    });
+                }
+                id
+            }
+            None => {
+                conn.execute(
+                    "INSERT INTO watermark_presets (name, spec, position)
+                     VALUES (?1, ?2, (SELECT COALESCE(MAX(position), -1) + 1 FROM watermark_presets))",
+                    (&name, &spec),
+                )?;
+                conn.last_insert_rowid()
+            }
+        };
+        Ok(WatermarkPreset {
+            id: Some(id),
+            name,
+            spec: preset.spec.clone(),
+        })
+    }
+
+    pub fn delete_watermark_preset(&self, id: i64) -> Result<(), StoreError> {
+        let conn = self.conn.lock().map_err(|_| StoreError::Poisoned)?;
+        conn.execute("DELETE FROM watermark_presets WHERE id = ?1", [id])?;
         Ok(())
     }
 }

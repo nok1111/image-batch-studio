@@ -8,6 +8,7 @@ import type {
   ResizeSpec,
   Settings,
   TransformSpec,
+  WatermarkSpec,
 } from "@/lib/ipc";
 
 export type FormatChoice = ImageFormat | "source";
@@ -25,6 +26,7 @@ export interface ModuleOptions {
   compressPreset: CompressPreset;
   resize: ResizeSpec;
   transform: TransformSpec;
+  watermark: WatermarkSpec;
   presetId: number | null;
   rename: RenameSpec;
   outputDir: string | null;
@@ -46,6 +48,20 @@ export const DEFAULT_RESIZE: ResizeSpec = {
   height: 1080,
   percent: 50,
   allowUpscale: false,
+};
+export const DEFAULT_WATERMARK: WatermarkSpec = {
+  kind: "text",
+  text: "",
+  color: [255, 255, 255, 255],
+  imagePath: "",
+  position: "bottomRight",
+  custom: [0.5, 0.5],
+  opacity: 0.6,
+  rotation: 0,
+  scale: 0.12,
+  margin: 0.04,
+  tiled: false,
+  spacing: 0.5,
 };
 export const DEFAULT_RENAME: RenameSpec = {
   template: "{name}_{n:03}",
@@ -77,6 +93,7 @@ export function resolveOptions(
       crop: null,
     },
     presetId: null,
+    watermark: DEFAULT_WATERMARK,
     rename: DEFAULT_RENAME,
     outputDir: settings.defaultOutputDir,
   };
@@ -142,6 +159,7 @@ export function buildJob(
     },
     resize: module === "resizer" ? o.resize : null,
     transform: module === "cropRotate" ? o.transform : null,
+    watermark: module === "watermark" ? o.watermark : null,
     rename: module === "renamer" ? o.rename : null,
   };
 }

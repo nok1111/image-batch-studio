@@ -134,6 +134,7 @@ fn metadata_strip_job_keeps_all_gif_frames() {
         },
         transform: None,
         resize: None,
+        watermark: None,
         rename: None,
     };
     let results = Mutex::new(Vec::new());
@@ -172,6 +173,7 @@ fn gif_strip_with_target_size_warns_instead_of_silently_ignoring() {
         },
         transform: None,
         resize: None,
+        watermark: None,
         rename: None,
     };
     let results = Mutex::new(Vec::new());
@@ -207,6 +209,7 @@ fn converting_an_animated_gif_still_uses_first_frame() {
         },
         transform: None,
         resize: None,
+        watermark: None,
         rename: None,
     };
     let results = Mutex::new(Vec::new());

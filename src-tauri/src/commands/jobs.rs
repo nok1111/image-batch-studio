@@ -7,6 +7,7 @@ use std::sync::{mpsc, Arc};
 use std::time::{Duration, Instant};
 use tauri::ipc::Channel;
 use tauri::{AppHandle, Manager, State};
+use tauri_plugin_dialog::DialogExt;
 
 /// Results are forwarded to the UI in batches at most this often (~10 Hz).
 const FLUSH_INTERVAL: Duration = Duration::from_millis(100);
@@ -76,6 +77,44 @@ pub async fn load_image(
         message: e.message,
     })?;
     Ok(tauri::ipc::Response::new(bytes))
+}
+
+/// Lets the user pick a logo file for the Watermark module: opens the dialog,
+/// verifies the file decodes as an image, then whitelists it for `load_image`.
+#[tauri::command]
+pub fn pick_watermark_image(
+    app: AppHandle,
+    state: State<'_, AppState>,
+) -> CommandResult<Option<String>> {
+    let picked = app
+        .dialog()
+        .file()
+        .add_filter(
+            "Images",
+            &["png", "jpg", "jpeg", "webp", "bmp", "gif", "tif", "tiff"],
+        )
+        .blocking_pick_file();
+    let Some(file) = picked else {
+        return Ok(None);
+    };
+    let path = file.into_path().map_err(|e| CommandError {
+        code: "image",
+        message: e.to_string(),
+    })?;
+    ibs_core::codec::decode(&path).map_err(|e| CommandError {
+        code: "image",
+        message: e.message,
+    })?;
+    let path = std::fs::canonicalize(&path).unwrap_or(path);
+    state
+        .viewable
+        .lock()
+        .map_err(|_| CommandError {
+            code: "internal",
+            message: "state lock poisoned".into(),
+        })?
+        .insert(path.clone());
+    Ok(Some(path.to_string_lossy().into_owned()))
 }
 
 /// Starts a batch in the background and streams `JobEvent`s on `on_event`.

@@ -232,5 +232,28 @@
   },
   "meta": {
     "info": "Removes EXIF (camera, GPS), XMP, ICC profile and comments from every file. Pixel data is untouched; formats that keep nothing extra are re-encoded cleanly."
+  },
+  "wm": {
+    "kind": "Watermark",
+    "kindText": "Text",
+    "kindImage": "Logo",
+    "text": "Text",
+    "textPlaceholder": "© Your name",
+    "color": "Colour",
+    "chooseImage": "Choose image…",
+    "noImage": "No image chosen",
+    "scale": "Size",
+    "opacity": "Opacity",
+    "rotation": "Rotation",
+    "margin": "Margin",
+    "position": "Position",
+    "custom": "Custom position",
+    "customX": "X",
+    "customY": "Y",
+    "tiled": "Repeat as tiled pattern",
+    "spacing": "Tile spacing",
+    "preview": "Preview image",
+    "previewHint": "Approximate preview — the final result is rendered by the engine.",
+    "previewError": "Could not load the preview image"
   }
 }
