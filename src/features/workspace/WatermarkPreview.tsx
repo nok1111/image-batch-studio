@@ -2,15 +2,18 @@ import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { ipc, type WatermarkSpec } from "@/lib/ipc";
 
-function useImageBytes(path: string | null) {
+function useImageBytes(path: string | null, register = false) {
   const [url, setUrl] = useState<string | null>(null);
   useEffect(() => {
     setUrl(null);
     if (!path) return;
     let objectUrl: string | null = null;
     let alive = true;
-    ipc
-      .loadImage(path)
+    // Saved presets outlive the `viewable` whitelist (app restarts, and
+    // starting a batch rebuilds it), so a logo path is re-registered before
+    // loading — the command still decode-validates the file.
+    (register ? ipc.registerWatermarkImage(path) : Promise.resolve())
+      .then(() => ipc.loadImage(path))
       .then((buf) => {
         if (!alive) return;
         objectUrl = URL.createObjectURL(new Blob([buf], { type: "image/png" }));
@@ -21,7 +24,7 @@ function useImageBytes(path: string | null) {
       alive = false;
       if (objectUrl) URL.revokeObjectURL(objectUrl);
     };
-  }, [path]);
+  }, [path, register]);
   return url;
 }
 
@@ -39,7 +42,10 @@ export function WatermarkPreview({
   const { t } = useTranslation();
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const baseUrl = useImageBytes(path);
-  const logoUrl = useImageBytes(spec.kind === "image" ? spec.imagePath : null);
+  const logoUrl = useImageBytes(
+    spec.kind === "image" ? spec.imagePath : null,
+    true,
+  );
   const [error, setError] = useState(false);
 
   useEffect(() => {
@@ -76,14 +82,16 @@ export function WatermarkPreview({
         ctx.restore();
       };
       const stamp = () => {
+        // Engine: text em-height = scale*minDim; logo longest side =
+        // scale*minDim (keeps pathological aspect ratios bounded).
         const tw =
           spec.kind === "text"
             ? Math.max(4, spec.scale * minDim) * (spec.text.length || 2) * 0.6
-            : spec.scale * minDim;
+            : spec.scale * minDim * ((logoImg?.naturalWidth ?? 1) / Math.max(logoImg?.naturalWidth ?? 1, logoImg?.naturalHeight ?? 1));
         const th =
           spec.kind === "text"
             ? Math.max(4, spec.scale * minDim)
-            : spec.scale * minDim * ((logoImg?.naturalHeight ?? 1) / (logoImg?.naturalWidth || 1));
+            : spec.scale * minDim * ((logoImg?.naturalHeight ?? 1) / Math.max(logoImg?.naturalWidth ?? 1, logoImg?.naturalHeight ?? 1));
         const m = spec.margin * minDim;
         if (spec.tiled) {
           const sx = tw * (1 + spec.spacing);

@@ -117,6 +117,29 @@ pub fn pick_watermark_image(
     Ok(Some(path.to_string_lossy().into_owned()))
 }
 
+/// Re-whitelists a previously picked watermark logo for `load_image`. A
+/// logo path saved inside a preset survives app restarts and job starts
+/// (which rebuild `viewable`), so the preview registers it on demand —
+/// the file still has to decode as an image before it is whitelisted.
+#[tauri::command]
+pub fn register_watermark_image(state: State<'_, AppState>, path: String) -> CommandResult<()> {
+    let path = PathBuf::from(path);
+    ibs_core::codec::decode(&path).map_err(|e| CommandError {
+        code: "image",
+        message: e.message,
+    })?;
+    let path = std::fs::canonicalize(&path).unwrap_or(path);
+    state
+        .viewable
+        .lock()
+        .map_err(|_| CommandError {
+            code: "internal",
+            message: "state lock poisoned".into(),
+        })?
+        .insert(path);
+    Ok(())
+}
+
 /// Starts a batch in the background and streams `JobEvent`s on `on_event`.
 #[tauri::command]
 pub fn start_job(

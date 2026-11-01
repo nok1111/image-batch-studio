@@ -38,6 +38,7 @@ pub fn run() {
             commands::settings::delete_watermark_preset,
             commands::jobs::scan_inputs,
             commands::jobs::pick_watermark_image,
+            commands::jobs::register_watermark_image,
             commands::jobs::preview_job,
             commands::jobs::load_image,
             commands::jobs::start_job,

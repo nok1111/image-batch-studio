@@ -33,7 +33,7 @@ opacity: number,
 rotation: number, 
 /**
  * Tile size as a fraction of the image's smaller side (0 < s ≤ 1): text
- * em height for `text`, tile width for `image`.
+ * em height for `text`, longest side for `image`.
  */
 scale: number, 
 /**

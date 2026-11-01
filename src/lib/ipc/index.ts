@@ -81,4 +81,6 @@ export const ipc = {
     invoke<WatermarkPreset>("save_watermark_preset", { preset }),
   deleteWatermarkPreset: (id: number) => invoke<void>("delete_watermark_preset", { id }),
   pickWatermarkImage: () => invoke<string | null>("pick_watermark_image"),
+  registerWatermarkImage: (path: string) =>
+    invoke<void>("register_watermark_image", { path }),
 };
