@@ -87,22 +87,31 @@ impl Store {
     }
 
     pub fn reset_settings(&self) -> Result<Settings, StoreError> {
-        // Resetting preferences should not re-trigger the first-run wizard.
-        let onboarding_done = self.settings().map(|s| s.onboarding_done).unwrap_or(false);
-        {
-            let conn = self.conn.lock().map_err(|_| StoreError::Poisoned)?;
-            conn.execute(
-                "DELETE FROM settings WHERE key = ?1",
+        // Read + write under one lock/transaction so a concurrent
+        // save_settings can never be overwritten by the reset.
+        let mut conn = self.conn.lock().map_err(|_| StoreError::Poisoned)?;
+        let tx = conn.transaction()?;
+        let raw: Option<String> = tx
+            .query_row(
+                "SELECT value FROM settings WHERE key = ?1",
                 [settings::SETTINGS_KEY],
-            )?;
-        }
+                |row| row.get(0),
+            )
+            .optional()?;
+        // Resetting preferences should not re-trigger the first-run wizard.
+        let onboarding_done = raw
+            .map(|r| Settings::from_json_lenient(&r).onboarding_done)
+            .unwrap_or(false);
         let restored = Settings {
             onboarding_done,
             ..Settings::default()
         };
-        if onboarding_done {
-            self.save_settings(&restored)?;
-        }
+        tx.execute(
+            "INSERT INTO settings (key, value) VALUES (?1, ?2)
+             ON CONFLICT(key) DO UPDATE SET value = excluded.value",
+            (settings::SETTINGS_KEY, serde_json::to_string(&restored)?),
+        )?;
+        tx.commit()?;
         Ok(restored)
     }
 }
