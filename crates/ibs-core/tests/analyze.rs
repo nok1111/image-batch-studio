@@ -23,7 +23,7 @@ fn reports_dimensions_format_color_alpha_and_estimate() {
     RgbaImage::from_pixel(24, 12, Rgba([1, 2, 3, 200]))
         .save_with_format(&png, F::Png)
         .unwrap();
-    let results = collect(&[png.clone()]);
+    let results = collect(std::slice::from_ref(&png));
     assert_eq!(results.len(), 1);
     let r = &results[0];
     assert_eq!(r.status, FileStatus::Done);
