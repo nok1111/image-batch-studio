@@ -138,7 +138,9 @@ impl Prepared {
     /// The watermark tile at this base image's scale, already rotated and with
     /// `opacity` applied.
     fn tile(&self, spec: &WatermarkSpec, min_dim: f32) -> RgbaImage {
-        let size = (spec.scale * min_dim).max(1.0);
+        // Bound the tile: a rotated tile briefly allocates a ~2x-area canvas
+        // plus its rotated copy, per worker, on top of the decoded image.
+        let size = (spec.scale * min_dim).clamp(1.0, MAX_TILE_EDGE);
         let mut tile = match self {
             Prepared::Text(font) => render_text(font, &spec.text, size, spec.color),
             Prepared::Logo(rgba) => {
@@ -172,6 +174,10 @@ impl Prepared {
                 ((eh - tile.height()) / 2) as i64,
             );
             tile = rotate_about_center(&expanded, rad, Interpolation::Bilinear, Rgba([0, 0, 0, 0]));
+            // The expanded canvas can be larger than the rotated tile (it
+            // must also fit the unrotated one); crop so edge margins land
+            // exactly where `position`/`margin` say.
+            tile = crop_to_content(tile);
         }
         tile
     }
@@ -196,6 +202,10 @@ fn render_text(font: &FontArc, text: &str, height: f32, color: [u8; 4]) -> RgbaI
     );
     crop_to_content(canvas)
 }
+
+/// Longest tile side in pixels. Rotating briefly doubles the allocation, so
+/// this also bounds per-worker memory on huge inputs.
+const MAX_TILE_EDGE: f32 = 4096.0;
 
 /// Tight alpha bounding box; empty input collapses to 1×1 transparent.
 fn crop_to_content(img: RgbaImage) -> RgbaImage {

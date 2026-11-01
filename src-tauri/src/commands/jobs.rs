@@ -119,16 +119,32 @@ pub fn pick_watermark_image(
 
 /// Re-whitelists a previously picked watermark logo for `load_image`. A
 /// logo path saved inside a preset survives app restarts and job starts
-/// (which rebuild `viewable`), so the preview registers it on demand —
-/// the file still has to decode as an image before it is whitelisted.
+/// (which rebuild `viewable`), so the preview registers it on demand.
+/// Only paths stored in a saved watermark preset may be registered — the
+/// webview cannot use this to read arbitrary files — and the file still
+/// has to decode as an image before it is whitelisted.
 #[tauri::command]
 pub fn register_watermark_image(state: State<'_, AppState>, path: String) -> CommandResult<()> {
-    let path = PathBuf::from(path);
+    let path = std::fs::canonicalize(PathBuf::from(&path)).unwrap_or_else(|_| PathBuf::from(&path));
+    let allowed = state
+        .store
+        .watermark_presets()?
+        .iter()
+        .filter(|p| !p.spec.image_path.is_empty())
+        .any(|p| {
+            let stored = PathBuf::from(&p.spec.image_path);
+            std::fs::canonicalize(&stored).unwrap_or(stored) == path
+        });
+    if !allowed {
+        return Err(CommandError {
+            code: "image",
+            message: "path is not a saved watermark image".into(),
+        });
+    }
     ibs_core::codec::decode(&path).map_err(|e| CommandError {
         code: "image",
         message: e.message,
     })?;
-    let path = std::fs::canonicalize(&path).unwrap_or(path);
     state
         .viewable
         .lock()

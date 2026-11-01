@@ -12,7 +12,11 @@ function useImageBytes(path: string | null, register = false) {
     // Saved presets outlive the `viewable` whitelist (app restarts, and
     // starting a batch rebuilds it), so a logo path is re-registered before
     // loading — the command still decode-validates the file.
-    (register ? ipc.registerWatermarkImage(path) : Promise.resolve())
+    // Registration is best-effort: a just-picked logo that is not in a
+    // saved preset is already whitelisted, so load_image still succeeds.
+    (register
+      ? ipc.registerWatermarkImage(path).catch(() => undefined)
+      : Promise.resolve())
       .then(() => ipc.loadImage(path))
       .then((buf) => {
         if (!alive) return;
