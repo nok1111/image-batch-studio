@@ -279,5 +279,16 @@
     "providerPending": "A loja ainda não está conectada — a ativação será habilitada no lançamento.",
     "error": "Erro de licença: {{message}}",
     "expiredBanner": "Seu teste de 3 dias expirou. Ative uma licença nas Configurações para continuar processando."
+  },
+  "onboarding": {
+    "welcomeTitle": "Bem-vindo ao Image Batch Studio",
+    "prefsTitle": "Deixe do seu jeito",
+    "tourTitle": "Nove ferramentas, um espaço de trabalho",
+    "tourBody": "Tudo é processado localmente — suas imagens nunca saem do seu disco.",
+    "licenseNote": "Você pode ativar uma licença quando quiser em Configurações → Licença.",
+    "back": "Voltar",
+    "next": "Avançar",
+    "start": "Começar a trabalhar",
+    "skip": "Pular"
   }
 }

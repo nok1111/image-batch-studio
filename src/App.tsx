@@ -8,6 +8,7 @@ import { DashboardPage } from "@/features/dashboard/DashboardPage";
 import { ModulePage } from "@/features/modules/ModulePage";
 import { SettingsPage } from "@/features/settings/SettingsPage";
 import { resolveLocale } from "@/i18n";
+import { OnboardingWizard } from "@/features/onboarding/OnboardingWizard";
 import { useLicenseStore } from "@/stores/license";
 import { useSettingsStore } from "@/stores/settings";
 
@@ -56,5 +57,5 @@ export default function App() {
       </div>
     );
   }
-  return <RouterProvider router={router} />;
+  return settings.onboardingDone ? <RouterProvider router={router} /> : <OnboardingWizard />;
 }

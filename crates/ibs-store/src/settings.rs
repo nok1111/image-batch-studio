@@ -44,6 +44,8 @@ pub struct Settings {
     /// 0 = automatic (number of logical CPUs).
     pub concurrency: u32,
     pub conflict_policy: ConflictPolicy,
+    /// First-run wizard was finished or skipped.
+    pub onboarding_done: bool,
 }
 
 impl Default for Settings {
@@ -56,6 +58,7 @@ impl Default for Settings {
             default_quality: 85,
             concurrency: 0,
             conflict_policy: ConflictPolicy::default(),
+            onboarding_done: false,
         }
     }
 }

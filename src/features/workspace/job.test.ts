@@ -10,6 +10,7 @@ const settings = {
   defaultQuality: 85,
   concurrency: 0,
   conflictPolicy: "rename",
+  onboardingDone: true,
 } as unknown as Settings;
 
 describe("module jobs", () => {
