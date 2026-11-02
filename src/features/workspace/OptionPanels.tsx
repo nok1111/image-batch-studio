@@ -1048,6 +1048,57 @@ export function WatermarkPanel({ o, set, disabled, items }: PanelProps) {
   );
 }
 
+/** Pipeline: the user stacks crop/rotate, resize, watermark and rename in one job. */
+export function PipelinePanel(props: PanelProps) {
+  const { t } = useTranslation();
+  const { o, set, disabled } = props;
+  // Each embedded panel would otherwise read/write the shared presetId;
+  // scope it per step so resize and watermark presets can't collide.
+  const scopePreset = (
+    field: "pipelineResizePresetId" | "pipelineWmPresetId",
+  ): PanelProps => ({
+    ...props,
+    o: { ...o, presetId: o[field] },
+    set: (patch) => {
+      const { presetId, ...rest } = patch;
+      set({
+        ...rest,
+        ...(presetId !== undefined ? { [field]: presetId } : {}),
+      });
+    },
+  });
+  const section = (
+    key: "transform" | "resize" | "watermark" | "rename",
+    content: React.ReactNode,
+  ) => (
+    <div className="flex basis-full flex-wrap items-center gap-x-6 gap-y-3 rounded-lg border border-border px-3 py-2">
+      <Check
+        label={t(`pipe.${key}`)}
+        checked={o.pipelineUse[key]}
+        onChange={(v) =>
+          set({ pipelineUse: { ...o.pipelineUse, [key]: v } })
+        }
+        disabled={disabled}
+      />
+      {o.pipelineUse[key] && (
+        <div className="flex basis-full flex-wrap items-end gap-x-6 gap-y-3">
+          {content}
+        </div>
+      )}
+    </div>
+  );
+  return (
+    <>
+      <FormatField {...props} formats={ALL_FORMATS} allowSource />
+      <CommonEncoding {...props} />
+      {section("transform", <CropRotatePanel {...props} />)}
+      {section("resize", <ResizerPanel {...scopePreset("pipelineResizePresetId")} />)}
+      {section("watermark", <WatermarkPanel {...scopePreset("pipelineWmPresetId")} />)}
+      {section("rename", <RenamerPanel {...props} />)}
+    </>
+  );
+}
+
 function Stat({ label, value }: { label: string; value: string }) {
   return (
     <div className="flex min-w-24 flex-col gap-0.5">

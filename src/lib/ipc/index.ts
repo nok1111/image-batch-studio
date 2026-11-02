@@ -43,6 +43,19 @@ export type { AnalyzeEvent } from "./bindings/AnalyzeEvent";
 export type { FileAnalysis } from "./bindings/FileAnalysis";
 
 /** Shape of errors returned by Rust commands (see src-tauri/src/error.rs). */
+export interface LicenseStatus {
+  /** "trial" | "licensed" | "expired" */
+  state: string;
+  daysLeft: number;
+  graceDaysLeft: number | null;
+  maskedKey: string | null;
+  email: string | null;
+  providerReady: boolean;
+}
+
+/** Public checkout URL; shown as "Buy a license" when configured. */
+export const BUY_URL = "https://nok1111.lemonsqueezy.com/checkout";
+
 export interface CommandError {
   code: string;
   message: string;
@@ -75,6 +88,10 @@ export const ipc = {
     return invoke<void>("start_job", { job, onEvent: channel });
   },
   cancelJob: () => invoke<boolean>("cancel_job"),
+  licenseStatus: () => invoke<LicenseStatus>("license_status"),
+  licenseActivate: (key: string) =>
+    invoke<LicenseStatus>("license_activate", { key }),
+  licenseDeactivate: () => invoke<LicenseStatus>("license_deactivate"),
   analyzeFiles: (paths: string[], onEvent: (event: AnalyzeEvent) => void) => {
     const channel = new Channel<AnalyzeEvent>();
     channel.onmessage = onEvent;

@@ -13,7 +13,8 @@
     "metadata": "Limpiar metadatos",
     "cropRotate": "Recortar y rotar",
     "analyzer": "Analizador",
-    "settings": "Ajustes"
+    "settings": "Ajustes",
+    "pipeline": "Pipeline"
   },
   "modules": {
     "converter": "Convierte imágenes entre PNG, JPG, WebP, AVIF, BMP, TIFF, GIF e ICO.",
@@ -25,7 +26,8 @@
     "cropRotate": "Recorta, rota y voltea imágenes en lote.",
     "analyzer": "Revisa dimensiones, formatos, transparencia y ahorro potencial.",
     "unavailableTitle": "Este módulo aún no está disponible",
-    "unavailableBody": "Está en desarrollo y se habilitará en una próxima versión."
+    "unavailableBody": "Está en desarrollo y se habilitará en una próxima versión.",
+    "pipeline": "Encadena recorte, redimensionado, marca de agua, renombrado y conversión en un solo lote."
   },
   "dashboard": {
     "welcome": "Bienvenido a Image Batch Studio",
@@ -97,15 +99,7 @@
     "reset": "Restaurar valores predeterminados",
     "saved": "Guardado",
     "saveError": "No se pudieron guardar los ajustes: {{message}}",
-    "loadError": "No se pudieron cargar los ajustes: {{message}}",
-    "presets": "Presets",
-    "presetsHint": "Exporta las opciones de los módulos y los presets de redimensión, o impórtalos desde otro equipo.",
-    "presetsExport": "Exportar…",
-    "presetsImport": "Importar…",
-    "presetsExported": "Presets exportados.",
-    "presetsImported": "Importadas opciones de {{modules}} módulos y {{count}} presets de redimensión.",
-    "presetsInvalid": "No es un archivo de presets válido",
-    "presetsImportPartial": "Importadas opciones de {{modules}} módulos y {{count}} presets de redimensión ({{failed}} fallaron)."
+    "loadError": "No se pudieron cargar los ajustes: {{message}}"
   },
   "workspace": {
     "addFiles": "Añadir archivos",
@@ -263,6 +257,28 @@
     "preview": "Imagen de vista previa",
     "previewHint": "Vista aproximada — el resultado final lo genera el motor.",
     "previewError": "No se pudo cargar la imagen de vista previa"
+  },
+  "pipe": {
+    "transform": "Recortar, girar y voltear",
+    "resize": "Redimensionar",
+    "watermark": "Marca de agua",
+    "rename": "Renombrar"
+  },
+  "license": {
+    "trialDays": "Prueba: {{count}} días restantes",
+    "licensed": "Con licencia",
+    "expired": "Prueba caducada",
+    "trialStatus": "Prueba — quedan {{count}} días",
+    "licensedStatus": "Con licencia — clave {{key}}",
+    "expiredStatus": "La prueba ha caducado — activa una licencia para seguir procesando",
+    "graceNote": "Funciona sin conexión hasta {{count}} días más antes de revalidar.",
+    "keyPlaceholder": "Clave de licencia (XXXX-XXXX-XXXX-XXXX)",
+    "activate": "Activar",
+    "deactivate": "Desactivar",
+    "buy": "Comprar licencia",
+    "providerPending": "La tienda aún no está conectada — la activación se habilitará en el lanzamiento.",
+    "error": "Error de licencia: {{message}}",
+    "expiredBanner": "Tu prueba de 3 días ha caducado. Activa una licencia en Ajustes para seguir procesando."
   },
   "analyzer": {
     "start_one": "Analizar {{count}} imagen",

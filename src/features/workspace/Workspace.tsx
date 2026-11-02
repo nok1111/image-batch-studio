@@ -18,6 +18,7 @@ import type { ModuleId } from "@/app/modules";
 import { formatBytes, formatDuration } from "@/lib/format";
 import { errorMessage, ipc, type PlannedOutput } from "@/lib/ipc";
 import { cn } from "@/lib/utils";
+import { useLicenseStore } from "@/stores/license";
 import { useQueueStore } from "@/stores/queue";
 import { useSettingsStore } from "@/stores/settings";
 import { CompareDialog } from "./CompareDialog";
@@ -30,6 +31,7 @@ import {
   CropRotatePanel,
   WatermarkPanel,
   MetadataPanel,
+  PipelinePanel,
   RenamerPanel,
   ResizerPanel,
 } from "./OptionPanels";
@@ -58,6 +60,7 @@ const PANELS = {
   metadata: MetadataPanel,
   cropRotate: CropRotatePanel,
   watermark: WatermarkPanel,
+  pipeline: PipelinePanel,
   analyzer: AnalyzerPanel,
 } as const;
 
@@ -85,8 +88,10 @@ export function Workspace({ module }: { module: ModuleId }) {
       : undefined;
   const [previewError, setPreviewError] = useState<string | null>(null);
 
+  const wantsRename =
+    module === "renamer" || (module === "pipeline" && o.pipelineUse.rename);
   const previewKey =
-    module === "renamer" && outputDir && q.items.length > 0 && !q.running
+    wantsRename && outputDir && q.items.length > 0 && !q.running
       ? JSON.stringify(
           buildJob(
             module,
@@ -173,6 +178,7 @@ export function Workspace({ module }: { module: ModuleId }) {
   };
 
   const busy = q.running || q.scanning;
+  const expired = useLicenseStore((s) => s.status)?.state === "expired";
   const s = q.summary;
   const saved = savings(q.items);
   const collisions =
@@ -258,7 +264,7 @@ export function Workspace({ module }: { module: ModuleId }) {
             items={q.items}
             running={q.running}
             onRemove={q.removeItem}
-            previews={module === "renamer" ? (previews ?? []) : undefined}
+            previews={wantsRename ? (previews ?? []) : undefined}
             renamed={q.lastMode === "copyOriginal"}
             onCompare={
               module === "renamer" || isAnalyzer
@@ -278,6 +284,14 @@ export function Workspace({ module }: { module: ModuleId }) {
         <Panel module={module} o={o} set={set} disabled={q.running} items={q.items} />
       </Card>
 
+      {expired && (
+        <p
+          role="alert"
+          className="rounded-lg border border-danger/40 bg-danger/10 px-4 py-3 text-sm text-danger"
+        >
+          {t("license.expiredBanner")}
+        </p>
+      )}
       <Card className="flex flex-wrap items-end gap-6 px-5 py-4">
         {!isAnalyzer && (
           <div className="flex min-w-0 flex-1 flex-col gap-1.5 text-xs text-text-secondary">
@@ -310,7 +324,7 @@ export function Workspace({ module }: { module: ModuleId }) {
           <Button
             size="lg"
             onClick={() => void start()}
-            disabled={busy || q.items.length === 0}
+            disabled={busy || expired || q.items.length === 0}
           >
             <Play />
             {isAnalyzer
@@ -320,7 +334,7 @@ export function Workspace({ module }: { module: ModuleId }) {
         )}
       </Card>
 
-      {module === "renamer" && q.items.length > 0 && !q.running && (
+      {wantsRename && q.items.length > 0 && !q.running && (
         <p
           className={cn(
             "text-xs",

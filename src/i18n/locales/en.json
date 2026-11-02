@@ -13,7 +13,8 @@
     "metadata": "Metadata Cleaner",
     "cropRotate": "Crop & Rotate",
     "analyzer": "Image Analyzer",
-    "settings": "Settings"
+    "settings": "Settings",
+    "pipeline": "Pipeline"
   },
   "modules": {
     "converter": "Convert images between PNG, JPG, WebP, AVIF, BMP, TIFF, GIF and ICO.",
@@ -25,7 +26,8 @@
     "cropRotate": "Crop, rotate and flip images in batch.",
     "analyzer": "Inspect dimensions, formats, transparency and potential savings.",
     "unavailableTitle": "This module is not available yet",
-    "unavailableBody": "It is being built and will be enabled in an upcoming version."
+    "unavailableBody": "It is being built and will be enabled in an upcoming version.",
+    "pipeline": "Chain crop, resize, watermark, rename and conversion in one batch."
   },
   "dashboard": {
     "welcome": "Welcome to Image Batch Studio",
@@ -97,15 +99,7 @@
     "reset": "Restore defaults",
     "saved": "Saved",
     "saveError": "Could not save settings: {{message}}",
-    "loadError": "Could not load settings: {{message}}",
-    "presets": "Presets",
-    "presetsHint": "Export your module options and resize presets, or import them from another machine.",
-    "presetsExport": "Export…",
-    "presetsImport": "Import…",
-    "presetsExported": "Presets exported.",
-    "presetsImported": "Imported settings for {{modules}} modules and {{count}} resize presets.",
-    "presetsInvalid": "Not a valid presets file",
-    "presetsImportPartial": "Imported settings for {{modules}} modules and {{count}} resize presets ({{failed}} failed)."
+    "loadError": "Could not load settings: {{message}}"
   },
   "workspace": {
     "addFiles": "Add files",
@@ -263,6 +257,28 @@
     "preview": "Preview image",
     "previewHint": "Approximate preview — the final result is rendered by the engine.",
     "previewError": "Could not load the preview image"
+  },
+  "pipe": {
+    "transform": "Crop, rotate & flip",
+    "resize": "Resize",
+    "watermark": "Watermark",
+    "rename": "Rename"
+  },
+  "license": {
+    "trialDays": "Trial: {{count}} days left",
+    "licensed": "Licensed",
+    "expired": "Trial expired",
+    "trialStatus": "Trial — {{count}} days left",
+    "licensedStatus": "Licensed — key {{key}}",
+    "expiredStatus": "Trial expired — activate a license to keep processing",
+    "graceNote": "Works offline for up to {{count}} more days before revalidation.",
+    "keyPlaceholder": "License key (XXXX-XXXX-XXXX-XXXX)",
+    "activate": "Activate",
+    "deactivate": "Deactivate",
+    "buy": "Buy a license",
+    "providerPending": "The store is not connected yet — activation will be enabled at release.",
+    "error": "License error: {{message}}",
+    "expiredBanner": "Your 3-day trial has expired. Activate a license in Settings to keep processing."
   },
   "analyzer": {
     "start_one": "Analyze {{count}} image",

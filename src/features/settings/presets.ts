@@ -19,6 +19,7 @@ const MODULES: ModuleId[] = [
   "metadata",
   "cropRotate",
   "analyzer",
+  "pipeline",
 ];
 
 const OPTION_KEYS: Record<
@@ -36,6 +37,9 @@ const OPTION_KEYS: Record<
   presetId: "number|null",
   rename: "object",
   watermark: "object",
+  pipelineUse: "object",
+  pipelineResizePresetId: "number|null",
+  pipelineWmPresetId: "number|null",
   outputDir: "string|null",
 };
 

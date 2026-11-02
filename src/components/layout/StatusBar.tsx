@@ -1,8 +1,10 @@
 import { useTranslation } from "react-i18next";
-import { CircleCheck, CircleX, Files, FolderOpen, Gauge, Timer } from "lucide-react";
+import { CircleCheck, CircleX, Files, FolderOpen, Gauge, KeyRound, Timer } from "lucide-react";
+import { useLicenseStore } from "@/stores/license";
 import { useQueueStore } from "@/stores/queue";
 import { useSettingsStore } from "@/stores/settings";
 import { formatDuration } from "@/lib/format";
+import { cn } from "@/lib/utils";
 import { ipc } from "@/lib/ipc";
 
 export function StatusBar() {
@@ -10,6 +12,7 @@ export function StatusBar() {
   const q = useQueueStore();
   const defaultDir = useSettingsStore((s) => s.settings?.defaultOutputDir ?? null);
   const outputDir = q.lastOutputDir ?? defaultDir;
+  const license = useLicenseStore((s) => s.status);
 
   return (
     <footer className="flex h-9 shrink-0 items-center gap-5 border-t border-border bg-bg-secondary px-4 text-xs text-text-secondary">
@@ -28,6 +31,19 @@ export function StatusBar() {
         <Timer className="size-3.5" />
         {t("status.eta")}: {q.etaSeconds === null ? "—" : formatDuration(q.etaSeconds)}
       </span>
+      {license && (
+        <span
+          className={cn(
+            "flex items-center gap-1.5",
+            license.state === "expired" ? "text-danger" : license.state === "trial" ? "text-warning" : "text-success",
+          )}
+        >
+          <KeyRound className="size-3.5" />
+          {license.state === "trial" && t("license.trialDays", { count: license.daysLeft })}
+          {license.state === "licensed" && t("license.licensed")}
+          {license.state === "expired" && t("license.expired")}
+        </span>
+      )}
       <button
         type="button"
         disabled={!outputDir}

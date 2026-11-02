@@ -15,6 +15,14 @@ export type FormatChoice = ImageFormat | "source";
 export type CompressPreset =
   "maxQuality" | "balanced" | "high" | "web" | "custom";
 
+/** Pipeline steps the user can combine in one job (engine order). */
+export interface PipelineUse {
+  transform: boolean;
+  resize: boolean;
+  watermark: boolean;
+  rename: boolean;
+}
+
 /** Every option a tool module can set; each module uses a subset. */
 export interface ModuleOptions {
   format: FormatChoice;
@@ -30,6 +38,10 @@ export interface ModuleOptions {
   presetId: number | null;
   rename: RenameSpec;
   outputDir: string | null;
+  pipelineUse: PipelineUse;
+  /** Per-step preset selections inside the Pipeline (independent of presetId). */
+  pipelineResizePresetId: number | null;
+  pipelineWmPresetId: number | null;
 }
 
 export const COMPRESS_QUALITY: Record<
@@ -96,6 +108,14 @@ export function resolveOptions(
     watermark: DEFAULT_WATERMARK,
     rename: DEFAULT_RENAME,
     outputDir: settings.defaultOutputDir,
+    pipelineUse: {
+      transform: false,
+      resize: false,
+      watermark: false,
+      rename: false,
+    },
+    pipelineResizePresetId: null,
+    pipelineWmPresetId: null,
   };
   return { ...defaults, ...overrides };
 }
@@ -157,10 +177,23 @@ export function buildJob(
       targetSize: target,
       conflict: settings.conflictPolicy,
     },
-    resize: module === "resizer" ? o.resize : null,
-    transform: module === "cropRotate" ? o.transform : null,
-    watermark: module === "watermark" ? o.watermark : null,
-    rename: module === "renamer" ? o.rename : null,
+    resize:
+      module === "resizer" || (module === "pipeline" && o.pipelineUse.resize)
+        ? o.resize
+        : null,
+    transform:
+      module === "cropRotate" ||
+      (module === "pipeline" && o.pipelineUse.transform)
+        ? o.transform
+        : null,
+    watermark:
+      module === "watermark" || (module === "pipeline" && o.pipelineUse.watermark)
+        ? o.watermark
+        : null,
+    rename:
+      module === "renamer" || (module === "pipeline" && o.pipelineUse.rename)
+        ? o.rename
+        : null,
   };
 }
 

@@ -13,7 +13,8 @@
     "metadata": "Limpar metadados",
     "cropRotate": "Cortar e girar",
     "analyzer": "Analisador",
-    "settings": "Configurações"
+    "settings": "Configurações",
+    "pipeline": "Pipeline"
   },
   "modules": {
     "converter": "Converta imagens entre PNG, JPG, WebP, AVIF, BMP, TIFF, GIF e ICO.",
@@ -25,7 +26,8 @@
     "cropRotate": "Corte, gire e espelhe imagens em lote.",
     "analyzer": "Veja dimensões, formatos, transparência e economia potencial.",
     "unavailableTitle": "Este módulo ainda não está disponível",
-    "unavailableBody": "Ele está em desenvolvimento e será habilitado em uma próxima versão."
+    "unavailableBody": "Ele está em desenvolvimento e será habilitado em uma próxima versão.",
+    "pipeline": "Encadeie corte, redimensionamento, marca d'água, renomeação e conversão em um só lote."
   },
   "dashboard": {
     "welcome": "Bem-vindo ao Image Batch Studio",
@@ -97,15 +99,7 @@
     "reset": "Restaurar padrões",
     "saved": "Salvo",
     "saveError": "Não foi possível salvar as configurações: {{message}}",
-    "loadError": "Não foi possível carregar as configurações: {{message}}",
-    "presets": "Presets",
-    "presetsHint": "Exporte as opções dos módulos e os presets de redimensionamento, ou importe-os de outra máquina.",
-    "presetsExport": "Exportar…",
-    "presetsImport": "Importar…",
-    "presetsExported": "Presets exportados.",
-    "presetsImported": "Importadas opções de {{modules}} módulos e {{count}} presets de redimensionamento.",
-    "presetsInvalid": "Não é um arquivo de presets válido",
-    "presetsImportPartial": "Importadas opções de {{modules}} módulos e {{count}} presets de redimensionamento ({{failed}} falharam)."
+    "loadError": "Não foi possível carregar as configurações: {{message}}"
   },
   "workspace": {
     "addFiles": "Adicionar arquivos",
@@ -263,6 +257,28 @@
     "preview": "Imagem de pré-visualização",
     "previewHint": "Prévia aproximada — o resultado final é renderizado pelo motor.",
     "previewError": "Não foi possível carregar a imagem de pré-visualização"
+  },
+  "pipe": {
+    "transform": "Cortar, girar e inverter",
+    "resize": "Redimensionar",
+    "watermark": "Marca d'água",
+    "rename": "Renomear"
+  },
+  "license": {
+    "trialDays": "Teste: {{count}} dias restantes",
+    "licensed": "Licenciado",
+    "expired": "Teste expirado",
+    "trialStatus": "Teste — {{count}} dias restantes",
+    "licensedStatus": "Licenciado — chave {{key}}",
+    "expiredStatus": "O teste expirou — ative uma licença para continuar processando",
+    "graceNote": "Funciona offline por até {{count}} dias antes da revalidação.",
+    "keyPlaceholder": "Chave de licença (XXXX-XXXX-XXXX-XXXX)",
+    "activate": "Ativar",
+    "deactivate": "Desativar",
+    "buy": "Comprar licença",
+    "providerPending": "A loja ainda não está conectada — a ativação será habilitada no lançamento.",
+    "error": "Erro de licença: {{message}}",
+    "expiredBanner": "Seu teste de 3 dias expirou. Ative uma licença nas Configurações para continuar processando."
   },
   "analyzer": {
     "start_one": "Analisar {{count}} imagem",

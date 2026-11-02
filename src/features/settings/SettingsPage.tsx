@@ -9,7 +9,9 @@ import { Select } from "@/components/ui/select";
 import { Segmented } from "@/components/ui/segmented";
 import { Slider } from "@/components/ui/slider";
 import { LOCALE_NATIVE_NAMES, SUPPORTED_LOCALES } from "@/i18n";
+import { BUY_URL } from "@/lib/ipc";
 import type { ConflictPolicy, ImageFormat, Language, Theme } from "@/lib/ipc";
+import { useLicenseStore } from "@/stores/license";
 import { errorMessage, ipc } from "@/lib/ipc";
 import { useQueueStore } from "@/stores/queue";
 import { useSettingsStore } from "@/stores/settings";
@@ -275,10 +277,7 @@ export function SettingsPage() {
         </Section>
 
         <Section title={t("settings.license")}>
-          <p className="flex items-center gap-2 text-sm text-text-secondary">
-            <Lock className="size-4" />
-            {t("settings.licenseStatus")}
-          </p>
+          <LicenseSection />
         </Section>
 
         <Section title={t("settings.about")}>
@@ -298,6 +297,81 @@ export function SettingsPage() {
           </p>
         </Section>
       </div>
+    </div>
+  );
+}
+
+function LicenseSection() {
+  const { t } = useTranslation();
+  const lic = useLicenseStore();
+  const [key, setKey] = useState("");
+  const status = lic.status;
+  return (
+    <div className="flex flex-col gap-3 py-4 first:pt-0 last:pb-0">
+      <p className="flex items-center gap-2 text-sm text-text">
+        <Lock className="size-4 text-text-secondary" />
+        {status === null && "…"}
+        {status?.state === "trial" &&
+          t("license.trialStatus", { count: status.daysLeft })}
+        {status?.state === "licensed" &&
+          t("license.licensedStatus", { key: status.maskedKey ?? "" })}
+        {status?.state === "expired" && (
+          <span className="text-danger">{t("license.expiredStatus")}</span>
+        )}
+      </p>
+      {status?.state === "licensed" && status.graceDaysLeft !== null && (
+        <p className="text-xs text-text-secondary">
+          {t("license.graceNote", { count: status.graceDaysLeft })}
+        </p>
+      )}
+      {status?.state !== "licensed" && (
+        <div className="flex items-center gap-2">
+          <input
+            type="text"
+            value={key}
+            onChange={(e) => setKey(e.target.value)}
+            placeholder={t("license.keyPlaceholder")}
+            aria-label={t("license.keyPlaceholder")}
+            spellCheck={false}
+            className="h-9 min-w-0 flex-1 rounded-lg border border-border bg-bg-secondary px-3 font-mono text-sm text-text placeholder:text-text-secondary/60 focus:border-accent focus:outline-none"
+          />
+          <Button
+            onClick={() => void lic.activate(key).then((ok) => ok && setKey(""))}
+            disabled={lic.busy || key.trim().length < 8}
+          >
+            {t("license.activate")}
+          </Button>
+        </div>
+      )}
+      {status?.state === "licensed" && (
+        <div className="flex items-center gap-2">
+          <Button
+            variant="secondary"
+            onClick={() => void lic.deactivate()}
+            disabled={lic.busy}
+          >
+            {t("license.deactivate")}
+          </Button>
+        </div>
+      )}
+      {!status?.providerReady && (
+        <p className="text-xs text-text-secondary">{t("license.providerPending")}</p>
+      )}
+      {lic.error && (
+        <p role="alert" className="text-sm text-danger">
+          {t("license.error", { message: lic.error })}
+        </p>
+      )}
+      <p className="text-xs text-text-secondary">
+        <a
+          href={BUY_URL}
+          target="_blank"
+          rel="noreferrer"
+          className="text-accent hover:underline"
+        >
+          {t("license.buy")}
+        </a>
+      </p>
     </div>
   );
 }
