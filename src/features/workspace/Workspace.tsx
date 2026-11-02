@@ -25,6 +25,7 @@ import { CompareDialog } from "./CompareDialog";
 import { FileList } from "./FileList";
 import { buildJob, resolveOptions, savings } from "./job";
 import {
+  AnalyzerPanel,
   CompressorPanel,
   ConverterPanel,
   CropRotatePanel,
@@ -34,6 +35,7 @@ import {
   RenamerPanel,
   ResizerPanel,
 } from "./OptionPanels";
+import { AnalysisTable } from "./AnalysisTable";
 
 const INPUT_EXTENSIONS = [
   "png",
@@ -59,6 +61,7 @@ const PANELS = {
   cropRotate: CropRotatePanel,
   watermark: WatermarkPanel,
   pipeline: PipelinePanel,
+  analyzer: AnalyzerPanel,
 } as const;
 
 export type WorkspaceModule = keyof typeof PANELS;
@@ -163,7 +166,12 @@ export function Workspace({ module }: { module: ModuleId }) {
     }
     return null;
   };
+  const isAnalyzer = module === "analyzer";
   const start = async () => {
+    if (isAnalyzer) {
+      await q.analyze();
+      return;
+    }
     const dir = outputDir ?? (await chooseOutput());
     if (!dir) return;
     await q.start(buildJob(module, o, settings, dir, []));
@@ -245,6 +253,12 @@ export function Workspace({ module }: { module: ModuleId }) {
               {t("workspace.dropHint")}
             </p>
           </div>
+        ) : isAnalyzer ? (
+          <AnalysisTable
+            items={q.items}
+            running={q.running}
+            onRemove={q.removeItem}
+          />
         ) : (
           <FileList
             items={q.items}
@@ -253,7 +267,7 @@ export function Workspace({ module }: { module: ModuleId }) {
             previews={wantsRename ? (previews ?? []) : undefined}
             renamed={q.lastMode === "copyOriginal"}
             onCompare={
-              module === "renamer"
+              module === "renamer" || isAnalyzer
                 ? undefined
                 : (i) => setCompare(q.items[i]?.path ?? null)
             }
@@ -279,20 +293,23 @@ export function Workspace({ module }: { module: ModuleId }) {
         </p>
       )}
       <Card className="flex flex-wrap items-end gap-6 px-5 py-4">
-        <div className="flex min-w-0 flex-1 flex-col gap-1.5 text-xs text-text-secondary">
-          {t("workspace.outputFolder")}
-          <button
-            type="button"
-            onClick={() => void chooseOutput()}
-            disabled={q.running}
-            className="flex h-9 min-w-0 items-center gap-2 rounded-lg border border-border bg-bg-secondary px-3 text-left text-sm text-text hover:bg-card-hover disabled:opacity-50 cursor-pointer"
-          >
-            <FolderOpen className="size-4 shrink-0 text-text-secondary" />
-            <span className="truncate">
-              {outputDir ?? t("workspace.noFolder")}
-            </span>
-          </button>
-        </div>
+        {!isAnalyzer && (
+          <div className="flex min-w-0 flex-1 flex-col gap-1.5 text-xs text-text-secondary">
+            {t("workspace.outputFolder")}
+            <button
+              type="button"
+              onClick={() => void chooseOutput()}
+              disabled={q.running}
+              className="flex h-9 min-w-0 items-center gap-2 rounded-lg border border-border bg-bg-secondary px-3 text-left text-sm text-text hover:bg-card-hover disabled:opacity-50 cursor-pointer"
+            >
+              <FolderOpen className="size-4 shrink-0 text-text-secondary" />
+              <span className="truncate">
+                {outputDir ?? t("workspace.noFolder")}
+              </span>
+            </button>
+          </div>
+        )}
+        {isAnalyzer && <span className="flex-1" />}
         {q.running ? (
           <Button
             variant="danger"
@@ -310,7 +327,9 @@ export function Workspace({ module }: { module: ModuleId }) {
             disabled={busy || expired || q.items.length === 0}
           >
             <Play />
-            {t("workspace.start", { count: q.items.length })}
+            {isAnalyzer
+              ? t("analyzer.start", { count: q.items.length })
+              : t("workspace.start", { count: q.items.length })}
           </Button>
         )}
       </Card>

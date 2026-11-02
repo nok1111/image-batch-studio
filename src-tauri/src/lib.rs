@@ -48,6 +48,9 @@ pub fn run() {
             commands::license::license_status,
             commands::license::license_activate,
             commands::license::license_deactivate,
+            commands::jobs::analyze_files,
+            commands::jobs::export_presets,
+            commands::jobs::import_presets,
         ])
         .run(tauri::generate_context!())
         .expect("error while running Image Batch Studio");

@@ -1,7 +1,7 @@
 import { create } from "zustand";
 import type { ModuleId } from "@/app/modules";
 import type { ModuleOptions } from "@/features/workspace/job";
-import { errorMessage, ipc, type FileError, type FileStatus, type FileWarning, type Job, type JobEvent, type JobSummary } from "@/lib/ipc";
+import { errorMessage, ipc, type AnalyzeEvent, type FileAnalysis, type FileError, type FileStatus, type FileWarning, type Job, type JobEvent, type JobSummary } from "@/lib/ipc";
 
 export type ItemStatus = "pending" | FileStatus;
 
@@ -14,6 +14,8 @@ export interface QueueItem {
   outputSize: number | null;
   error: FileError | null;
   warnings: FileWarning[];
+  /** Facts gathered by the Analyzer module; null until analyzed. */
+  analysis: FileAnalysis | null;
 }
 
 /** Aggregated batch progress shown in the status bar. */
@@ -58,8 +60,11 @@ interface QueueState extends QueueStats {
   removeItem: (index: number) => void;
   clear: () => void;
   start: (job: Omit<Job, "inputs">) => Promise<void>;
+  /** Read-only scan for the Analyzer module: fills each item's `analysis`. */
+  analyze: () => Promise<void>;
   cancel: () => Promise<void>;
   applyEvent: (event: JobEvent, now?: number) => void;
+  applyAnalyzeEvent: (event: AnalyzeEvent, now?: number) => void;
 }
 
 const idle = { completed: 0, failed: 0, speed: null, etaSeconds: null, running: false, summary: null, startedAt: null, cancelling: false, bytesDone: 0 };
@@ -88,7 +93,7 @@ export const useQueueStore = create<QueueState>((set, get) => ({
       for (const f of scan.files) {
         if (known.has(f.path)) continue;
         known.add(f.path);
-        fresh.push({ path: f.path, name: f.name, size: f.size, status: "pending", output: null, outputSize: null, error: null, warnings: [] });
+        fresh.push({ path: f.path, name: f.name, size: f.size, status: "pending", output: null, outputSize: null, error: null, warnings: [], analysis: null });
       }
       const items = [...get().items, ...fresh];
       set({
@@ -138,6 +143,24 @@ export const useQueueStore = create<QueueState>((set, get) => ({
     }
   },
 
+  analyze: async () => {
+    const { items, running } = get();
+    if (running || items.length === 0) return;
+    set({
+      ...idle,
+      running: true,
+      lastMode: null,
+      startedAt: Date.now(),
+      error: null,
+      items: items.map((i) => ({ ...i, status: "pending", output: null, outputSize: null, error: null, warnings: [], analysis: null })),
+    });
+    try {
+      await ipc.analyzeFiles(items.map((i) => i.path), (ev) => get().applyAnalyzeEvent(ev));
+    } catch (e) {
+      set({ running: false, startedAt: null, error: errorMessage(e) });
+    }
+  },
+
   cancel: async () => {
     if (!get().running) return;
     set({ cancelling: true });
@@ -167,6 +190,34 @@ export const useQueueStore = create<QueueState>((set, get) => ({
       if (r.status === "done" || r.status === "skipped") completed++;
       if (r.status === "failed") failed++;
       bytesDone += item.size;
+    }
+    const elapsed = s.startedAt ? (now - s.startedAt) / 1000 : 0;
+    const processed = completed + failed;
+    const speed = elapsed > 0 ? processed / elapsed : null;
+    const bytesPerSecond = elapsed > 0 ? bytesDone / elapsed : 0;
+    const etaSeconds = bytesPerSecond > 0 ? Math.max(0, s.bytesTotal - bytesDone) / bytesPerSecond : null;
+    set({ items, completed, failed, bytesDone, speed, etaSeconds });
+  },
+
+  applyAnalyzeEvent: (event, now = Date.now()) => {
+    const s = get();
+    if (event.type === "aborted") {
+      set({ running: false, cancelling: false, speed: null, etaSeconds: null, error: event.message });
+      return;
+    }
+    if (event.type === "finished") {
+      set({ running: false, cancelling: false, speed: null, etaSeconds: null, summary: event.summary });
+      return;
+    }
+    const items = s.items.slice();
+    let { completed, failed, bytesDone } = s;
+    for (const r of event.results) {
+      const item = items[r.index];
+      if (!item) continue;
+      items[r.index] = { ...item, status: r.status, error: r.error, analysis: r.analysis };
+      if (r.status === "done") completed++;
+      if (r.status === "failed") failed++;
+      bytesDone += r.bytes;
     }
     const elapsed = s.startedAt ? (now - s.startedAt) / 1000 : 0;
     const processed = completed + failed;

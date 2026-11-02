@@ -279,5 +279,26 @@
     "providerPending": "The store is not connected yet — activation will be enabled at release.",
     "error": "License error: {{message}}",
     "expiredBanner": "Your 3-day trial has expired. Activate a license in Settings to keep processing."
+  },
+  "analyzer": {
+    "start_one": "Analyze {{count}} image",
+    "start_other": "Analyze {{count}} images",
+    "yes": "yes",
+    "colName": "Name",
+    "colDims": "Dimensions",
+    "colFormat": "Format",
+    "colColor": "Color",
+    "colAlpha": "Alpha",
+    "colAnim": "Anim.",
+    "colSize": "Size",
+    "colEst": "WebP est.",
+    "statAnalyzed": "Analyzed",
+    "statSize": "Total size",
+    "statEst": "Est. WebP q80",
+    "statSaving": "Est. saving",
+    "statAlpha": "With alpha",
+    "statAnimated": "Animated",
+    "statExif": "With EXIF",
+    "hint": "Read-only: nothing is written. The estimate is each image re-encoded as lossy WebP at quality 80."
   }
 }
