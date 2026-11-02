@@ -255,8 +255,10 @@ fn placement_grid(
     if spec.tiled {
         let step_x = (tw as f32 * (1.0 + spec.spacing)).max(1.0) as i64;
         let step_y = (th as f32 * (1.0 + spec.spacing)).max(1.0) as i64;
-        let cols = ((bw + step_x - 1) / step_x).max(0) as u32;
-        let rows = ((bh + step_y - 1) / step_y).max(0) as u32;
+        // Saturating add: an extreme spacing saturates the cast to i64::MAX,
+        // and wrapping the column count would silently drop every tile.
+        let cols = (bw.saturating_add(step_x.saturating_sub(1)) / step_x).max(0) as u32;
+        let rows = (bh.saturating_add(step_y.saturating_sub(1)) / step_y).max(0) as u32;
         return (0, 0, step_x, step_y, cols, rows);
     }
     let m = (spec.margin * min_dim) as i64;
