@@ -97,7 +97,15 @@
     "reset": "Restaurar valores predeterminados",
     "saved": "Guardado",
     "saveError": "No se pudieron guardar los ajustes: {{message}}",
-    "loadError": "No se pudieron cargar los ajustes: {{message}}"
+    "loadError": "No se pudieron cargar los ajustes: {{message}}",
+    "presets": "Presets",
+    "presetsHint": "Exporta las opciones de los módulos y los presets de redimensión, o impórtalos desde otro equipo.",
+    "presetsExport": "Exportar…",
+    "presetsImport": "Importar…",
+    "presetsExported": "Presets exportados.",
+    "presetsImported": "Importadas opciones de {{modules}} módulos y {{count}} presets de redimensión.",
+    "presetsInvalid": "No es un archivo de presets válido",
+    "presetsImportPartial": "Importadas opciones de {{modules}} módulos y {{count}} presets de redimensión ({{failed}} fallaron)."
   },
   "workspace": {
     "addFiles": "Añadir archivos",
@@ -232,5 +240,26 @@
   },
   "meta": {
     "info": "Quita EXIF (cámara, GPS), XMP, perfil ICC y comentarios de todos los archivos. Los píxeles no se tocan."
+  },
+  "analyzer": {
+    "start_one": "Analizar {{count}} imagen",
+    "start_other": "Analizar {{count}} imágenes",
+    "yes": "sí",
+    "colName": "Nombre",
+    "colDims": "Medidas",
+    "colFormat": "Formato",
+    "colColor": "Color",
+    "colAlpha": "Alfa",
+    "colAnim": "Anim.",
+    "colSize": "Tamaño",
+    "colEst": "WebP est.",
+    "statAnalyzed": "Analizadas",
+    "statSize": "Tamaño total",
+    "statEst": "WebP q80 est.",
+    "statSaving": "Ahorro est.",
+    "statAlpha": "Con alfa",
+    "statAnimated": "Animadas",
+    "statExif": "Con EXIF",
+    "hint": "Solo lectura: no se escribe nada. La estimación es cada imagen recodificada como WebP con pérdida a calidad 80."
   }
 }

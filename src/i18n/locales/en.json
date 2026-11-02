@@ -97,7 +97,15 @@
     "reset": "Restore defaults",
     "saved": "Saved",
     "saveError": "Could not save settings: {{message}}",
-    "loadError": "Could not load settings: {{message}}"
+    "loadError": "Could not load settings: {{message}}",
+    "presets": "Presets",
+    "presetsHint": "Export your module options and resize presets, or import them from another machine.",
+    "presetsExport": "Export…",
+    "presetsImport": "Import…",
+    "presetsExported": "Presets exported.",
+    "presetsImported": "Imported settings for {{modules}} modules and {{count}} resize presets.",
+    "presetsInvalid": "Not a valid presets file",
+    "presetsImportPartial": "Imported settings for {{modules}} modules and {{count}} resize presets ({{failed}} failed)."
   },
   "workspace": {
     "addFiles": "Add files",
@@ -232,5 +240,26 @@
   },
   "meta": {
     "info": "Removes EXIF (camera, GPS), XMP, ICC profile and comments from every file. Pixel data is untouched; formats that keep nothing extra are re-encoded cleanly."
+  },
+  "analyzer": {
+    "start_one": "Analyze {{count}} image",
+    "start_other": "Analyze {{count}} images",
+    "yes": "yes",
+    "colName": "Name",
+    "colDims": "Dimensions",
+    "colFormat": "Format",
+    "colColor": "Color",
+    "colAlpha": "Alpha",
+    "colAnim": "Anim.",
+    "colSize": "Size",
+    "colEst": "WebP est.",
+    "statAnalyzed": "Analyzed",
+    "statSize": "Total size",
+    "statEst": "Est. WebP q80",
+    "statSaving": "Est. saving",
+    "statAlpha": "With alpha",
+    "statAnimated": "Animated",
+    "statExif": "With EXIF",
+    "hint": "Read-only: nothing is written. The estimate is each image re-encoded as lossy WebP at quality 80."
   }
 }

@@ -2,6 +2,7 @@
 //! decoding/encoding and batch execution. Independent of Tauri so it can be
 //! tested headless.
 
+pub mod analyze;
 pub mod codec;
 pub mod engine;
 pub mod error;
@@ -13,6 +14,7 @@ pub mod output;
 pub mod resize;
 pub mod transform;
 
+pub use analyze::{analyze, AnalysisResult, AnalyzeEvent, FileAnalysis};
 pub use engine::{preview, run, JobError, JobEvent, JobSummary, PlannedAction, PlannedOutput};
 pub use error::{FileError, FileErrorCode};
 pub use format::{ConflictPolicy, ImageFormat};

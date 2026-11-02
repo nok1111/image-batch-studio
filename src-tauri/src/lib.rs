@@ -38,6 +38,9 @@ pub fn run() {
             commands::jobs::load_image,
             commands::jobs::start_job,
             commands::jobs::cancel_job,
+            commands::jobs::analyze_files,
+            commands::jobs::export_presets,
+            commands::jobs::import_presets,
         ])
         .run(tauri::generate_context!())
         .expect("error while running Image Batch Studio");
