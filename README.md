@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="assets/imagebatch-logo.png" alt="Image Batch Studio" width="160" />
+</p>
+
 # Image Batch Studio
 
 Professional bulk image processing for Windows. 100% local — no cloud, no accounts, no AI/token costs.
