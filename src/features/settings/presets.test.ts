@@ -59,6 +59,32 @@ describe("presets file", () => {
     expect(parsed.resizePresets.map((p) => p.name)).toEqual(["Ok"]);
   });
 
+  it("accepts only strict pipelineUse step flags", () => {
+    const parsed = parsePresetsFile(
+      JSON.stringify({
+        version: PRESETS_VERSION,
+        moduleOptions: {
+          pipeline: {
+            pipelineUse: { resize: "false", rename: true, bogus: true },
+          },
+        },
+      }),
+    );
+    // Non-boolean values and unknown steps reject the whole object.
+    expect(parsed.moduleOptions.pipeline).toEqual({});
+    const ok = parsePresetsFile(
+      JSON.stringify({
+        version: PRESETS_VERSION,
+        moduleOptions: {
+          pipeline: { pipelineUse: { resize: true, watermark: false } },
+        },
+      }),
+    );
+    expect(ok.moduleOptions.pipeline).toEqual({
+      pipelineUse: { resize: true, watermark: false },
+    });
+  });
+
   it("tolerates missing sections", () => {
     const parsed = parsePresetsFile(JSON.stringify({ version: PRESETS_VERSION }));
     expect(parsed.moduleOptions).toEqual({});

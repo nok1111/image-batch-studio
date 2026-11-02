@@ -99,7 +99,15 @@
     "reset": "Restaurar valores predeterminados",
     "saved": "Guardado",
     "saveError": "No se pudieron guardar los ajustes: {{message}}",
-    "loadError": "No se pudieron cargar los ajustes: {{message}}"
+    "loadError": "No se pudieron cargar los ajustes: {{message}}",
+    "presets": "Presets",
+    "presetsHint": "Exporta las opciones de los módulos y los presets de redimensión, o impórtalos desde otro equipo.",
+    "presetsExport": "Exportar…",
+    "presetsImport": "Importar…",
+    "presetsExported": "Presets exportados.",
+    "presetsImported": "Importadas opciones de {{modules}} módulos y {{count}} presets de redimensión.",
+    "presetsImportPartial": "Importadas opciones de {{modules}} módulos y {{count}} presets de redimensión ({{failed}} fallaron).",
+    "presetsInvalid": "No es un archivo de presets válido"
   },
   "workspace": {
     "addFiles": "Añadir archivos",

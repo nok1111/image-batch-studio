@@ -109,6 +109,20 @@ export function SettingsPage() {
           // the preset got here, or clear it ("custom") when it wasn't imported.
           patch.presetId = idMap.get(patch.presetId) ?? null;
         }
+        if (mod === "watermark" && patch.presetId != null) {
+          // Watermark presets aren't part of the exported file — the id
+          // means nothing on this machine.
+          patch.presetId = null;
+        }
+        if (mod === "pipeline") {
+          if (patch.pipelineResizePresetId != null) {
+            patch.pipelineResizePresetId =
+              idMap.get(patch.pipelineResizePresetId) ?? null;
+          }
+          if (patch.pipelineWmPresetId != null) {
+            patch.pipelineWmPresetId = null;
+          }
+        }
         q.setOptions(mod as Parameters<typeof q.setOptions>[0], patch);
         modules++;
       }

@@ -99,7 +99,15 @@
     "reset": "Restaurar padrões",
     "saved": "Salvo",
     "saveError": "Não foi possível salvar as configurações: {{message}}",
-    "loadError": "Não foi possível carregar as configurações: {{message}}"
+    "loadError": "Não foi possível carregar as configurações: {{message}}",
+    "presets": "Presets",
+    "presetsHint": "Exporte as opções dos módulos e os presets de redimensionamento, ou importe-os de outra máquina.",
+    "presetsExport": "Exportar…",
+    "presetsImport": "Importar…",
+    "presetsExported": "Presets exportados.",
+    "presetsImported": "Importadas opções de {{modules}} módulos e {{count}} presets de redimensionamento.",
+    "presetsImportPartial": "Importadas opções de {{modules}} módulos e {{count}} presets de redimensionamento ({{failed}} falharam).",
+    "presetsInvalid": "Não é um arquivo de presets válido"
   },
   "workspace": {
     "addFiles": "Adicionar arquivos",
