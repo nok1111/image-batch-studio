@@ -14,6 +14,7 @@ const defaults: Settings = {
   defaultQuality: 85,
   concurrency: 0,
   conflictPolicy: "rename",
+  onboardingDone: true,
 };
 const info = { name: "x", version: "0.1.0", tauriVersion: "2", os: "windows", arch: "x86_64", logicalCpus: 8 };
 

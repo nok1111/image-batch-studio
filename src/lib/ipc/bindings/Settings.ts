@@ -12,4 +12,8 @@ defaultQuality: number,
 /**
  * 0 = automatic (number of logical CPUs).
  */
-concurrency: number, conflictPolicy: ConflictPolicy, };
+concurrency: number, conflictPolicy: ConflictPolicy, 
+/**
+ * First-run wizard was finished or skipped.
+ */
+onboardingDone: boolean, };

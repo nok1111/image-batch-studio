@@ -280,6 +280,17 @@
     "error": "License error: {{message}}",
     "expiredBanner": "Your 3-day trial has expired. Activate a license in Settings to keep processing."
   },
+  "onboarding": {
+    "welcomeTitle": "Welcome to Image Batch Studio",
+    "prefsTitle": "Make it yours",
+    "tourTitle": "Nine tools, one workspace",
+    "tourBody": "Everything runs locally on your machine — your images never leave your disk.",
+    "licenseNote": "You can activate a license anytime in Settings → License.",
+    "back": "Back",
+    "next": "Next",
+    "start": "Start working",
+    "skip": "Skip"
+  },
   "analyzer": {
     "start_one": "Analyze {{count}} image",
     "start_other": "Analyze {{count}} images",

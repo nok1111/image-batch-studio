@@ -28,7 +28,7 @@
 - [x] Watermark  - [x] Metadata Cleaner  - [x] Crop & Rotate  - [x] Analyzer  - [x] Preset import/export  - [x] AVIF input  - [x] Pipeline (chained ops)
 
 ## Phase 5 — Commercialization
-- [x] Licensing + 3-day trial (ADR 0005)  - [ ] Signed installer  - [ ] Onboarding  - [ ] Docs / landing
+- [x] Licensing + 3-day trial (ADR 0005)  - [ ] Signed installer  - [x] Onboarding  - [ ] Docs / landing
 
 ## Phase 6 — Testing & release
 - [ ] Win10 / Win11  - [ ] Large batches  - [ ] Low memory  - [ ] Corrupted files  - [ ] Offline  - [ ] Install / uninstall
