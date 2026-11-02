@@ -132,20 +132,20 @@ pub fn pick_watermark_image(
 #[tauri::command]
 pub fn register_watermark_image(state: State<'_, AppState>, path: String) -> CommandResult<()> {
     // Stored paths are already canonical (canonicalized at pick time), so
-    // compare verbatim: canonicalizing both sides would also accept a
-    // picked path that was later retargeted via symlink.
-    let path = std::fs::canonicalize(PathBuf::from(&path)).unwrap_or_else(|_| PathBuf::from(&path));
+    // compare verbatim: canonicalizing the supplied path would accept a
+    // symlink or `..` alias that merely resolves to a picked file.
     let allowed = state
         .store
         .watermark_image_paths()?
         .iter()
-        .any(|p| std::path::Path::new(p).as_os_str() == path.as_os_str());
+        .any(|p| p == &path);
     if !allowed {
         return Err(CommandError {
             code: "image",
             message: "path was not picked through the file dialog".into(),
         });
     }
+    let path = PathBuf::from(&path);
     ibs_core::codec::decode(&path).map_err(|e| CommandError {
         code: "image",
         message: e.message,
@@ -178,6 +178,29 @@ pub fn start_job(
             code: "license",
             message: "trial expired — a license is required".into(),
         });
+    }
+    // A watermark logo may only come from the file dialog: the engine
+    // decodes `image_path` and job outputs enter `viewable`, so without
+    // this check a crafted job could read back any local image file.
+    if let Some(w) = &job.watermark {
+        // Stored paths are canonical; requiring the job's path to still
+        // canonicalize to itself also rejects a picked path later replaced
+        // by a symlink (or one swapped behind a symlinked ancestor).
+        let logo_still_picked = || {
+            let p = PathBuf::from(&w.image_path);
+            p.canonicalize().ok().is_some_and(|c| c == p)
+                && state
+                    .store
+                    .watermark_image_paths()
+                    .map(|paths| paths.iter().any(|x| x == &w.image_path))
+                    .unwrap_or(false)
+        };
+        if w.kind == ibs_core::watermark::WatermarkKind::Image && !logo_still_picked() {
+            return Err(CommandError {
+                code: "image",
+                message: "watermark image was not picked through the file dialog".into(),
+            });
+        }
     }
     let concurrency = state.store.settings()?.concurrency as usize;
     let output_dir = ibs_core::engine::prepare(&job)?;

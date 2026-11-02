@@ -99,7 +99,15 @@
     "reset": "Restore defaults",
     "saved": "Saved",
     "saveError": "Could not save settings: {{message}}",
-    "loadError": "Could not load settings: {{message}}"
+    "loadError": "Could not load settings: {{message}}",
+    "presets": "Presets",
+    "presetsHint": "Export your module options and resize presets, or import them from another machine.",
+    "presetsExport": "Export…",
+    "presetsImport": "Import…",
+    "presetsExported": "Presets exported.",
+    "presetsImported": "Imported settings for {{modules}} modules and {{count}} resize presets.",
+    "presetsImportPartial": "Imported settings for {{modules}} modules and {{count}} resize presets ({{failed}} failed).",
+    "presetsInvalid": "Not a valid presets file"
   },
   "workspace": {
     "addFiles": "Add files",

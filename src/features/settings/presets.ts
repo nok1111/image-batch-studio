@@ -96,6 +96,19 @@ function isRenameSpec(v: unknown): boolean {
   );
 }
 
+const PIPELINE_STEPS = new Set(["transform", "resize", "watermark", "rename"]);
+
+function isPipelineUse(v: unknown): boolean {
+  const s = v as Record<string, unknown> | null;
+  return (
+    !!s &&
+    typeof s === "object" &&
+    !Array.isArray(s) &&
+    Object.keys(s).every((k) => PIPELINE_STEPS.has(k)) &&
+    Object.values(s).every((x) => typeof x === "boolean")
+  );
+}
+
 /** Spec-valued options need full shape validation, not just "is an object". */
 const OBJECT_VALIDATORS: Partial<
   Record<keyof ModuleOptions, (v: unknown) => boolean>
@@ -103,6 +116,7 @@ const OBJECT_VALIDATORS: Partial<
   resize: isResizeSpec,
   transform: isTransformSpec,
   rename: isRenameSpec,
+  pipelineUse: isPipelineUse,
 };
 
 function typeOk(v: unknown, kind: string): boolean {
