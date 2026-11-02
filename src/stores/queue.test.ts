@@ -22,6 +22,7 @@ const job = {
   output: { dir: "/out", mode: { kind: "convert", format: "jpeg" }, quality: 80, lossless: false, metadata: "strip", targetSize: null, conflict: "rename" },
   transform: null,
       resize: null,
+  watermark: null,
   rename: null,
 } as const;
 

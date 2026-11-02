@@ -6,6 +6,7 @@ import type { AnalyzeEvent } from "./bindings/AnalyzeEvent";
 import type { ScanResult } from "./bindings/ScanResult";
 import type { PlannedOutput } from "./bindings/PlannedOutput";
 import type { ResizePreset } from "./bindings/ResizePreset";
+import type { WatermarkPreset } from "./bindings/WatermarkPreset";
 
 export type { Settings } from "./bindings/Settings";
 export type { Theme } from "./bindings/Theme";
@@ -33,6 +34,10 @@ export type { RenameSpec } from "./bindings/RenameSpec";
 export type { ResizeMode } from "./bindings/ResizeMode";
 export type { ResizePreset } from "./bindings/ResizePreset";
 export type { ResizeSpec } from "./bindings/ResizeSpec";
+export type { WatermarkKind } from "./bindings/WatermarkKind";
+export type { WatermarkPosition } from "./bindings/WatermarkPosition";
+export type { WatermarkPreset } from "./bindings/WatermarkPreset";
+export type { WatermarkSpec } from "./bindings/WatermarkSpec";
 export type { AnalysisResult } from "./bindings/AnalysisResult";
 export type { AnalyzeEvent } from "./bindings/AnalyzeEvent";
 export type { FileAnalysis } from "./bindings/FileAnalysis";
@@ -85,4 +90,11 @@ export const ipc = {
   listResizePresets: () => invoke<ResizePreset[]>("list_resize_presets"),
   saveResizePreset: (preset: ResizePreset) => invoke<ResizePreset>("save_resize_preset", { preset }),
   deleteResizePreset: (id: number) => invoke<void>("delete_resize_preset", { id }),
+  listWatermarkPresets: () => invoke<WatermarkPreset[]>("list_watermark_presets"),
+  saveWatermarkPreset: (preset: WatermarkPreset) =>
+    invoke<WatermarkPreset>("save_watermark_preset", { preset }),
+  deleteWatermarkPreset: (id: number) => invoke<void>("delete_watermark_preset", { id }),
+  pickWatermarkImage: () => invoke<string | null>("pick_watermark_image"),
+  registerWatermarkImage: (path: string) =>
+    invoke<void>("register_watermark_image", { path }),
 };

@@ -35,6 +35,7 @@ const OPTION_KEYS: Record<
   transform: "object",
   presetId: "number|null",
   rename: "object",
+  watermark: "object",
   outputDir: "string|null",
 };
 

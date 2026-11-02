@@ -58,7 +58,7 @@ export const TOOL_MODULES: ToolModule[] = [
     id: "watermark",
     path: "/watermark",
     icon: Stamp,
-    available: false,
+    available: true,
     accent: "teal",
   },
   {

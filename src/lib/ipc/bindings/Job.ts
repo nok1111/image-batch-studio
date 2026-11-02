@@ -3,6 +3,7 @@ import type { OutputSpec } from "./OutputSpec";
 import type { RenameSpec } from "./RenameSpec";
 import type { ResizeSpec } from "./ResizeSpec";
 import type { TransformSpec } from "./TransformSpec";
+import type { WatermarkSpec } from "./WatermarkSpec";
 
 /**
  * A batch: every input goes through the same processing and output spec.
@@ -12,6 +13,10 @@ export type Job = { inputs: Array<string>, output: OutputSpec,
  * Crop / rotate / flip applied before resize.
  */
 transform: TransformSpec | null, resize: ResizeSpec | null, 
+/**
+ * Watermark drawn last, after transform and resize.
+ */
+watermark: WatermarkSpec | null, 
 /**
  * Output file names; without it outputs keep the input's name.
  */

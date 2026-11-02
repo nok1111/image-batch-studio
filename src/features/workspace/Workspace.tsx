@@ -28,6 +28,7 @@ import {
   CompressorPanel,
   ConverterPanel,
   CropRotatePanel,
+  WatermarkPanel,
   MetadataPanel,
   RenamerPanel,
   ResizerPanel,
@@ -55,6 +56,7 @@ const PANELS = {
   renamer: RenamerPanel,
   metadata: MetadataPanel,
   cropRotate: CropRotatePanel,
+  watermark: WatermarkPanel,
   analyzer: AnalyzerPanel,
 } as const;
 

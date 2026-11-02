@@ -241,6 +241,29 @@
   "meta": {
     "info": "Remove EXIF (câmera, GPS), XMP, perfil ICC e comentários de todos os arquivos. Os pixels não são alterados."
   },
+  "wm": {
+    "kind": "Marca d'água",
+    "kindText": "Texto",
+    "kindImage": "Logotipo",
+    "text": "Texto",
+    "textPlaceholder": "© Seu nome",
+    "color": "Cor",
+    "chooseImage": "Escolher imagem…",
+    "noImage": "Nenhuma imagem escolhida",
+    "scale": "Tamanho",
+    "opacity": "Opacidade",
+    "rotation": "Rotação",
+    "margin": "Margem",
+    "position": "Posição",
+    "custom": "Posição personalizada",
+    "customX": "X",
+    "customY": "Y",
+    "tiled": "Repetir em mosaico",
+    "spacing": "Espaçamento do mosaico",
+    "preview": "Imagem de pré-visualização",
+    "previewHint": "Prévia aproximada — o resultado final é renderizado pelo motor.",
+    "previewError": "Não foi possível carregar a imagem de pré-visualização"
+  },
   "analyzer": {
     "start_one": "Analisar {{count}} imagem",
     "start_other": "Analisar {{count}} imagens",

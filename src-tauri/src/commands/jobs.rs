@@ -81,6 +81,84 @@ pub async fn load_image(
     Ok(tauri::ipc::Response::new(bytes))
 }
 
+/// Lets the user pick a logo file for the Watermark module: opens the dialog,
+/// verifies the file decodes as an image, then whitelists it for `load_image`.
+#[tauri::command]
+pub fn pick_watermark_image(
+    app: AppHandle,
+    state: State<'_, AppState>,
+) -> CommandResult<Option<String>> {
+    let picked = app
+        .dialog()
+        .file()
+        .add_filter(
+            "Images",
+            &["png", "jpg", "jpeg", "webp", "bmp", "gif", "tif", "tiff"],
+        )
+        .blocking_pick_file();
+    let Some(file) = picked else {
+        return Ok(None);
+    };
+    let path = file.into_path().map_err(|e| CommandError {
+        code: "image",
+        message: e.to_string(),
+    })?;
+    ibs_core::codec::decode(&path).map_err(|e| CommandError {
+        code: "image",
+        message: e.message,
+    })?;
+    let path = std::fs::canonicalize(&path).unwrap_or(path);
+    // Record dialog-picked logos: register_watermark_image trusts only
+    // these (never webview-supplied preset contents).
+    state.store.add_watermark_image(&path.to_string_lossy())?;
+    state
+        .viewable
+        .lock()
+        .map_err(|_| CommandError {
+            code: "internal",
+            message: "state lock poisoned".into(),
+        })?
+        .insert(path.clone());
+    Ok(Some(path.to_string_lossy().into_owned()))
+}
+
+/// Re-whitelists a watermark logo for `load_image`. Dialog-picked paths
+/// survive app restarts and job starts (which rebuild `viewable`), so
+/// the preview registers them on demand. Only paths recorded by
+/// `pick_watermark_image` are trusted — webview-supplied preset contents
+/// are not — and the file still has to decode as an image.
+#[tauri::command]
+pub fn register_watermark_image(state: State<'_, AppState>, path: String) -> CommandResult<()> {
+    // Stored paths are already canonical (canonicalized at pick time), so
+    // compare verbatim: canonicalizing both sides would also accept a
+    // picked path that was later retargeted via symlink.
+    let path = std::fs::canonicalize(PathBuf::from(&path)).unwrap_or_else(|_| PathBuf::from(&path));
+    let allowed = state
+        .store
+        .watermark_image_paths()?
+        .iter()
+        .any(|p| std::path::Path::new(p).as_os_str() == path.as_os_str());
+    if !allowed {
+        return Err(CommandError {
+            code: "image",
+            message: "path was not picked through the file dialog".into(),
+        });
+    }
+    ibs_core::codec::decode(&path).map_err(|e| CommandError {
+        code: "image",
+        message: e.message,
+    })?;
+    state
+        .viewable
+        .lock()
+        .map_err(|_| CommandError {
+            code: "internal",
+            message: "state lock poisoned".into(),
+        })?
+        .insert(path);
+    Ok(())
+}
+
 /// Starts a batch in the background and streams `JobEvent`s on `on_event`.
 #[tauri::command]
 pub fn start_job(
