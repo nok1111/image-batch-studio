@@ -242,27 +242,26 @@ fn crop_to_content(img: RgbaImage) -> RgbaImage {
     .to_image()
 }
 
-/// Where each tile lands, in order, given the tile/base sizes.
-fn placements(spec: &WatermarkSpec, tw: i64, th: i64, bw: i64, bh: i64) -> Vec<(i64, i64)> {
+/// Tile placement as an origin, step and column/row counts — computed lazily
+/// so a huge base with a tiny tile never materializes millions of positions.
+fn placement_grid(
+    spec: &WatermarkSpec,
+    tw: i64,
+    th: i64,
+    bw: i64,
+    bh: i64,
+) -> (i64, i64, i64, i64, u32, u32) {
     let min_dim = bw.min(bh) as f32;
     if spec.tiled {
         let step_x = (tw as f32 * (1.0 + spec.spacing)).max(1.0) as i64;
         let step_y = (th as f32 * (1.0 + spec.spacing)).max(1.0) as i64;
-        let mut out = Vec::new();
-        let mut y = 0;
-        while y < bh {
-            let mut x = 0;
-            while x < bw {
-                out.push((x, y));
-                x += step_x;
-            }
-            y += step_y;
-        }
-        return out;
+        let cols = ((bw + step_x - 1) / step_x).max(0) as u32;
+        let rows = ((bh + step_y - 1) / step_y).max(0) as u32;
+        return (0, 0, step_x, step_y, cols, rows);
     }
     let m = (spec.margin * min_dim) as i64;
     use WatermarkPosition::*;
-    vec![match spec.position {
+    let (x, y) = match spec.position {
         TopLeft => (m, m),
         TopCenter => ((bw - tw) / 2, m),
         TopRight => (bw - tw - m, m),
@@ -276,7 +275,8 @@ fn placements(spec: &WatermarkSpec, tw: i64, th: i64, bw: i64, bh: i64) -> Vec<(
             (spec.custom[0] * bw as f32) as i64 - tw / 2,
             (spec.custom[1] * bh as f32) as i64 - th / 2,
         ),
-    }]
+    };
+    (x, y, 0, 0, 1, 1)
 }
 
 /// Stamps the watermark on `img` (in place). 16-bit sources keep their
@@ -307,14 +307,17 @@ pub fn apply(spec: &WatermarkSpec, prepared: &Prepared, img: &mut DynamicImage) 
                 ])
             },
         );
-        for (x, y) in placements(
+        let (gx, gy, sx, sy, cols, rows) = placement_grid(
             spec,
             tile.width() as i64,
             tile.height() as i64,
             base.width() as i64,
             base.height() as i64,
-        ) {
-            overlay16(&mut base, &tile, x, y);
+        );
+        for row in 0..rows {
+            for col in 0..cols {
+                overlay16(&mut base, &tile, gx + col as i64 * sx, gy + row as i64 * sy);
+            }
         }
         *img = DynamicImage::ImageRgba16(base);
         return;
@@ -322,14 +325,17 @@ pub fn apply(spec: &WatermarkSpec, prepared: &Prepared, img: &mut DynamicImage) 
     let mut base = img.to_rgba8();
     let min_dim = base.width().min(base.height()) as f32;
     let tile = prepared.tile(spec, min_dim);
-    for (x, y) in placements(
+    let (gx, gy, sx, sy, cols, rows) = placement_grid(
         spec,
         tile.width() as i64,
         tile.height() as i64,
         base.width() as i64,
         base.height() as i64,
-    ) {
-        image::imageops::overlay(&mut base, &tile, x, y);
+    );
+    for row in 0..rows {
+        for col in 0..cols {
+            image::imageops::overlay(&mut base, &tile, gx + col as i64 * sx, gy + row as i64 * sy);
+        }
     }
     *img = DynamicImage::ImageRgba8(base);
 }
@@ -359,11 +365,17 @@ fn overlay16(
                 continue;
             }
             let d = base.get_pixel_mut(bx as u32, by as u32);
-            let da = d[3] as u32;
+            // Proper source-over for straight alpha: out_a = sa + da(1-sa),
+            // out_c = (s*sa + d*da(1-sa)) / out_a — the destination's own
+            // alpha must attenuate its contribution.
+            let sa = sa as u64;
+            let da = d[3] as u64;
+            let out_a = sa * 65535 + da * (65535 - sa);
             for c in 0..3 {
-                d[c] = ((s[c] as u32 * sa + d[c] as u32 * (65535 - sa) + 32767) / 65535) as u16;
+                let num = s[c] as u64 * sa * 65535 + d[c] as u64 * da * (65535 - sa);
+                d[c] = ((num + out_a / 2) / out_a) as u16;
             }
-            d[3] = (sa + (da * (65535 - sa) + 32767) / 65535) as u16;
+            d[3] = ((out_a + 32767) / 65535) as u16;
         }
     }
 }
