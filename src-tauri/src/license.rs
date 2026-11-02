@@ -10,6 +10,12 @@ pub const TRIAL_DAYS: u64 = 3;
 /// A validated license stays usable offline for this long.
 pub const GRACE_DAYS: u64 = 14;
 const ROLLBACK_TOLERANCE_SECS: u64 = 3600;
+/// Server revalidation happens at most this often, so starting a batch
+/// never waits on a network round-trip while grace is comfortably left.
+const REFRESH_INTERVAL_SECS: u64 = 86_400;
+/// Cap on every Lemon Squeezy request: an offline machine must not stall
+/// `start_job` while a connect/response times out.
+const HTTP_TIMEOUT: std::time::Duration = std::time::Duration::from_secs(10);
 
 // Key used to bind trial markers to this machine's fingerprint. Obfuscation
 // by splitting only delays extraction; that's accepted per ADR 0005.
@@ -231,14 +237,30 @@ impl Marker<'_> {
 
 pub struct License<'a> {
     markers: Vec<Marker<'a>>,
-    /// Marker whose presence alone proves the app already ran on this
+    /// Markers whose presence alone proves the app already ran on this
     /// machine: if every real record vanished, the trial is expired (ADR).
-    seen_file: PathBuf,
+    /// One lives outside the app data dir so "delete app data" does not
+    /// reset the trial on Linux/macOS (the registry covers Windows).
+    seen_files: Vec<PathBuf>,
     fingerprint: String,
+}
+
+fn home_dir() -> Option<PathBuf> {
+    std::env::var_os("HOME")
+        .or_else(|| std::env::var_os("USERPROFILE"))
+        .map(PathBuf::from)
 }
 
 impl<'a> License<'a> {
     pub fn load(store: &'a ibs_store::Store, data_dir: &Path) -> Self {
+        Self::load_with_home(store, data_dir, home_dir())
+    }
+
+    fn load_with_home(store: &'a ibs_store::Store, data_dir: &Path, home: Option<PathBuf>) -> Self {
+        let mut seen_files = vec![data_dir.join("seen.stamp")];
+        if let Some(home) = home {
+            seen_files.push(home.join(".image-batch-studio").join("seen.stamp"));
+        }
         Self {
             markers: vec![
                 Marker::Store(store),
@@ -246,7 +268,7 @@ impl<'a> License<'a> {
                 #[cfg(target_os = "windows")]
                 Marker::Registry,
             ],
-            seen_file: data_dir.join("seen.stamp"),
+            seen_files,
             fingerprint: fingerprint(),
         }
     }
@@ -280,7 +302,8 @@ impl<'a> License<'a> {
     /// Was this machine ever seen? True if any marker (or the seen flag)
     /// exists — even records that fail signature verification.
     fn seen_before(&self) -> bool {
-        self.seen_file.exists() || self.markers.iter().any(|m| m.read().is_some())
+        self.seen_files.iter().any(|f| f.exists())
+            || self.markers.iter().any(|m| m.read().is_some())
     }
 
     fn persist(&self, rec: &Record) {
@@ -288,21 +311,21 @@ impl<'a> License<'a> {
         for m in &self.markers {
             m.write(&rec);
         }
-        if let Some(dir) = self.seen_file.parent() {
-            let _ = std::fs::create_dir_all(dir);
-        }
-        let _ = std::fs::write(
-            &self.seen_file,
-            mac_of(
-                &Record {
-                    first: rec.first,
-                    last: 0,
-                    lic: None,
-                    mac: String::new(),
-                },
-                &self.fingerprint,
-            ),
+        let flag = mac_of(
+            &Record {
+                first: rec.first,
+                last: 0,
+                lic: None,
+                mac: String::new(),
+            },
+            &self.fingerprint,
         );
+        for f in &self.seen_files {
+            if let Some(dir) = f.parent() {
+                let _ = std::fs::create_dir_all(dir);
+            }
+            let _ = std::fs::write(f, &flag);
+        }
     }
 
     /// Resolve the current record, applying trial-start, merging, and
@@ -351,7 +374,11 @@ impl<'a> License<'a> {
         }
         let (rec, expired) = self.current();
         if let Some(lic) = rec.as_ref().and_then(|r| r.lic.clone()) {
-            let elapsed = now().saturating_sub(lic.validated);
+            // Measure grace against the monotonic `last` floor: a clock set
+            // backwards neither locks out a paid license nor stretches its
+            // offline grace window.
+            let effective_now = now().max(rec.as_ref().map(|r| r.last).unwrap_or(0));
+            let elapsed = effective_now.saturating_sub(lic.validated);
             // Signed keys never revalidate — no grace countdown for them.
             let grace = if lic.instance_id.is_some() {
                 Some(GRACE_DAYS.saturating_sub(elapsed / 86400))
@@ -359,7 +386,7 @@ impl<'a> License<'a> {
                 None
             };
             let expired_lic =
-                expired || elapsed >= GRACE_DAYS * 86400 || lic.expires.is_some_and(|e| now() >= e);
+                elapsed >= GRACE_DAYS * 86400 || lic.expires.is_some_and(|e| effective_now >= e);
             return LicenseStatus {
                 state: if expired_lic { "expired" } else { "licensed" },
                 days_left: 0,
@@ -437,8 +464,10 @@ impl<'a> License<'a> {
         Ok(self.status())
     }
 
-    /// Refresh the grace window with a server validation. Best effort —
-    /// offline just keeps the existing `validated` timestamp.
+    /// Refresh the grace window with a server validation. Runs at most
+    /// once per REFRESH_INTERVAL_SECS so batches don't wait on the network;
+    /// a definitive rejection revokes locally, a network failure keeps the
+    /// remaining offline grace.
     pub fn refresh(&self) {
         let Some(lic) = self.merged().and_then(|r| r.lic) else {
             return;
@@ -446,11 +475,26 @@ impl<'a> License<'a> {
         let Some(iid) = lic.instance_id.as_deref() else {
             return; // signed keys need no refresh
         };
-        if ls_validate(&lic.key, iid).is_ok() {
-            let _ = self.store_license(Licensed {
-                validated: now(),
-                ..lic
-            });
+        if now().saturating_sub(lic.validated) < REFRESH_INTERVAL_SECS {
+            return;
+        }
+        match ls_validate(&lic.key, iid) {
+            Ok(()) => {
+                let _ = self.store_license(Licensed {
+                    validated: now(),
+                    ..lic
+                });
+            }
+            Err(LicenseError::Invalid(_)) => {
+                // The server says the key is dead (revoked/refunded): stop
+                // processing immediately rather than ride out the grace.
+                let (rec, _) = self.current();
+                if let Some(mut rec) = rec {
+                    rec.lic = None;
+                    self.persist(&rec);
+                }
+            }
+            Err(LicenseError::Network(_)) => {}
         }
     }
 
@@ -503,7 +547,12 @@ fn mask(key: &str) -> String {
 // ---- Lemon Squeezy License API ----
 
 fn ls_post(endpoint: &str, body: &serde_json::Value) -> Result<serde_json::Value, LicenseError> {
-    ureq::post(format!("{LS_BASE}/{endpoint}"))
+    let agent: ureq::Agent = ureq::Agent::config_builder()
+        .timeout_global(Some(HTTP_TIMEOUT))
+        .build()
+        .into();
+    agent
+        .post(format!("{LS_BASE}/{endpoint}"))
         .header("Accept", "application/json")
         .header("Content-Type", "application/json")
         .send_json(body)
@@ -623,9 +672,10 @@ mod tests {
     }
 
     fn lic(dir: &Path) -> License<'static> {
-        // Tests own a leaked store: fine for one-shot test processes.
+        // Tests own a leaked store: fine for one-shot test processes. No
+        // home marker — keeps runs deterministic and the real $HOME clean.
         let s: &'static Store = Box::leak(Box::new(Store::open(&dir.join("db.sqlite3")).unwrap()));
-        License::load(s, dir)
+        License::load_with_home(s, dir, None)
     }
 
     #[test]
@@ -685,6 +735,46 @@ mod tests {
             b64e(&sig.to_bytes())
         );
         assert!(verify_signed_key(&forged).is_err());
+    }
+
+    #[test]
+    fn licensed_survives_clock_rollback() {
+        let dir = temp_dir();
+        let l = lic(&dir);
+        // A record stamped from the future (clock moved back afterwards):
+        // the paid license must stay usable, not report "expired".
+        let rec = Record {
+            first: now() + 2 * 86400,
+            last: now() + 2 * 86400,
+            lic: Some(Licensed {
+                key: "XXXX-TEST".into(),
+                instance_id: Some("iid".into()),
+                email: None,
+                validated: now(),
+                expires: None,
+            }),
+            mac: String::new(),
+        };
+        l.persist(&rec);
+        let s = l.status();
+        assert_eq!(s.state, "licensed");
+        let _ = std::fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn home_seen_marker_blocks_wiped_trial() {
+        let dir = temp_dir();
+        let home = temp_dir();
+        let s1: &'static Store = Box::leak(Box::new(Store::open(&dir.join("db.sqlite3")).unwrap()));
+        License::load_with_home(s1, &dir, Some(home.clone())).status();
+        // Wipe the whole app data dir: the home marker still says "seen".
+        let _ = std::fs::remove_dir_all(&dir);
+        std::fs::create_dir_all(&dir).unwrap();
+        let s2: &'static Store = Box::leak(Box::new(Store::open(&dir.join("db.sqlite3")).unwrap()));
+        let l2 = License::load_with_home(s2, &dir, Some(home.clone()));
+        assert_eq!(l2.status().state, "expired");
+        let _ = std::fs::remove_dir_all(&dir);
+        let _ = std::fs::remove_dir_all(&home);
     }
 
     #[test]
