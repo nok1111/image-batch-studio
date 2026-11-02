@@ -31,7 +31,7 @@ impl ImageFormat {
         }
     }
 
-    /// Formats accepted as input. AVIF input is planned for a later phase.
+    /// Formats accepted as input.
     pub fn from_input_path(path: &Path) -> Option<Self> {
         let ext = path.extension()?.to_str()?.to_ascii_lowercase();
         Some(match ext.as_str() {
@@ -42,6 +42,7 @@ impl ImageFormat {
             "tif" | "tiff" => Self::Tiff,
             "gif" => Self::Gif,
             "ico" => Self::Ico,
+            "avif" => Self::Avif,
             _ => return None,
         })
     }
