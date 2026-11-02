@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { open } from "@tauri-apps/plugin-dialog";
-import { ArrowLeft, ArrowRight, FolderOpen, Images, KeyRound, X } from "lucide-react";
+import { ArrowLeft, ArrowRight, FolderOpen, KeyRound, X } from "lucide-react";
 import { TOOL_MODULES } from "@/app/modules";
 import { Button } from "@/components/ui/button";
 import { Segmented } from "@/components/ui/segmented";
@@ -35,9 +35,7 @@ export function OnboardingWizard() {
       <div className="flex w-full max-w-2xl flex-1 flex-col justify-center gap-8 py-10">
         {step === 0 && (
           <div className="flex flex-col items-center gap-5 text-center">
-            <span className="flex size-16 items-center justify-center rounded-2xl bg-accent/15 text-accent">
-              <Images className="size-8" />
-            </span>
+            <img src="/imagebatch-logo.png" alt="" className="size-36 drop-shadow-xl" />
             <div>
               <h1 className="text-2xl font-semibold text-text">{t("onboarding.welcomeTitle")}</h1>
               <p className="mt-2 text-sm text-text-secondary">{t("app.tagline")}</p>
