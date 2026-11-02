@@ -184,10 +184,18 @@ impl Prepared {
 }
 
 fn render_text(font: &FontArc, text: &str, height: f32, color: [u8; 4]) -> RgbaImage {
-    let scale = font
+    let mut scale = font
         .pt_to_px_scale(height)
         .unwrap_or_else(|| PxScale::from(height));
-    let (w, h) = text_size(scale, font, text);
+    let (mut w, mut h) = text_size(scale, font, text);
+    // MAX_TILE_EDGE caps the height via `size` but not the width a long
+    // string accumulates — shrink the font until the box fits, or the
+    // canvas below can reach gigabytes.
+    if w > MAX_TILE_EDGE as u32 {
+        let shrink = MAX_TILE_EDGE / w as f32;
+        scale = PxScale::from(scale.x * shrink);
+        (w, h) = text_size(scale, font, text);
+    }
     // Oversize canvas: glyph ink can extend past the logical box.
     let mut canvas = RgbaImage::from_pixel(w + h, h * 2, Rgba([0, 0, 0, 0]));
     let scaled = font.as_scaled(scale);
@@ -234,44 +242,128 @@ fn crop_to_content(img: RgbaImage) -> RgbaImage {
     .to_image()
 }
 
-/// Stamps the watermark on `img` (in place).
-pub fn apply(spec: &WatermarkSpec, prepared: &Prepared, img: &mut DynamicImage) {
-    let mut base = img.to_rgba8();
-    let min_dim = base.width().min(base.height()) as f32;
-    let tile = prepared.tile(spec, min_dim);
-    let (tw, th) = (tile.width() as i64, tile.height() as i64);
-    let (bw, bh) = (base.width() as i64, base.height() as i64);
+/// Where each tile lands, in order, given the tile/base sizes.
+fn placements(spec: &WatermarkSpec, tw: i64, th: i64, bw: i64, bh: i64) -> Vec<(i64, i64)> {
+    let min_dim = bw.min(bh) as f32;
     if spec.tiled {
         let step_x = (tw as f32 * (1.0 + spec.spacing)).max(1.0) as i64;
         let step_y = (th as f32 * (1.0 + spec.spacing)).max(1.0) as i64;
+        let mut out = Vec::new();
         let mut y = 0;
         while y < bh {
             let mut x = 0;
             while x < bw {
-                image::imageops::overlay(&mut base, &tile, x, y);
+                out.push((x, y));
                 x += step_x;
             }
             y += step_y;
         }
-    } else {
-        let m = (spec.margin * min_dim) as i64;
-        use WatermarkPosition::*;
-        let (x, y) = match spec.position {
-            TopLeft => (m, m),
-            TopCenter => ((bw - tw) / 2, m),
-            TopRight => (bw - tw - m, m),
-            MiddleLeft => (m, (bh - th) / 2),
-            Center => ((bw - tw) / 2, (bh - th) / 2),
-            MiddleRight => (bw - tw - m, (bh - th) / 2),
-            BottomLeft => (m, bh - th - m),
-            BottomCenter => ((bw - tw) / 2, bh - th - m),
-            BottomRight => (bw - tw - m, bh - th - m),
-            Custom => (
-                (spec.custom[0] * bw as f32) as i64 - tw / 2,
-                (spec.custom[1] * bh as f32) as i64 - th / 2,
-            ),
-        };
+        return out;
+    }
+    let m = (spec.margin * min_dim) as i64;
+    use WatermarkPosition::*;
+    vec![match spec.position {
+        TopLeft => (m, m),
+        TopCenter => ((bw - tw) / 2, m),
+        TopRight => (bw - tw - m, m),
+        MiddleLeft => (m, (bh - th) / 2),
+        Center => ((bw - tw) / 2, (bh - th) / 2),
+        MiddleRight => (bw - tw - m, (bh - th) / 2),
+        BottomLeft => (m, bh - th - m),
+        BottomCenter => ((bw - tw) / 2, bh - th - m),
+        BottomRight => (bw - tw - m, bh - th - m),
+        Custom => (
+            (spec.custom[0] * bw as f32) as i64 - tw / 2,
+            (spec.custom[1] * bh as f32) as i64 - th / 2,
+        ),
+    }]
+}
+
+/// Stamps the watermark on `img` (in place). 16-bit sources keep their
+/// precision: the tile is widened to 16 bit and composited in RGBA16 space
+/// instead of reducing the whole image to 8 bit.
+pub fn apply(spec: &WatermarkSpec, prepared: &Prepared, img: &mut DynamicImage) {
+    let is_16bit = matches!(
+        img,
+        DynamicImage::ImageLuma16(_)
+            | DynamicImage::ImageLumaA16(_)
+            | DynamicImage::ImageRgb16(_)
+            | DynamicImage::ImageRgba16(_)
+    );
+    if is_16bit {
+        let mut base = img.to_rgba16();
+        let min_dim = base.width().min(base.height()) as f32;
+        let tile8 = prepared.tile(spec, min_dim);
+        let tile = image::ImageBuffer::<image::Rgba<u16>, Vec<u16>>::from_fn(
+            tile8.width(),
+            tile8.height(),
+            |x, y| {
+                let p = tile8.get_pixel(x, y);
+                image::Rgba([
+                    p[0] as u16 * 257,
+                    p[1] as u16 * 257,
+                    p[2] as u16 * 257,
+                    p[3] as u16 * 257,
+                ])
+            },
+        );
+        for (x, y) in placements(
+            spec,
+            tile.width() as i64,
+            tile.height() as i64,
+            base.width() as i64,
+            base.height() as i64,
+        ) {
+            overlay16(&mut base, &tile, x, y);
+        }
+        *img = DynamicImage::ImageRgba16(base);
+        return;
+    }
+    let mut base = img.to_rgba8();
+    let min_dim = base.width().min(base.height()) as f32;
+    let tile = prepared.tile(spec, min_dim);
+    for (x, y) in placements(
+        spec,
+        tile.width() as i64,
+        tile.height() as i64,
+        base.width() as i64,
+        base.height() as i64,
+    ) {
         image::imageops::overlay(&mut base, &tile, x, y);
     }
     *img = DynamicImage::ImageRgba8(base);
+}
+
+/// Straight-alpha source-over composite; `imageops::overlay` only blends
+/// 8-bit and float pixels, so the 16-bit path does it by hand.
+fn overlay16(
+    base: &mut image::ImageBuffer<image::Rgba<u16>, Vec<u16>>,
+    tile: &image::ImageBuffer<image::Rgba<u16>, Vec<u16>>,
+    x0: i64,
+    y0: i64,
+) {
+    let (bw, bh) = (base.width() as i64, base.height() as i64);
+    for ty in 0..tile.height() as i64 {
+        let by = y0 + ty;
+        if by < 0 || by >= bh {
+            continue;
+        }
+        for tx in 0..tile.width() as i64 {
+            let bx = x0 + tx;
+            if bx < 0 || bx >= bw {
+                continue;
+            }
+            let s = *tile.get_pixel(tx as u32, ty as u32);
+            let sa = s[3] as u32;
+            if sa == 0 {
+                continue;
+            }
+            let d = base.get_pixel_mut(bx as u32, by as u32);
+            let da = d[3] as u32;
+            for c in 0..3 {
+                d[c] = ((s[c] as u32 * sa + d[c] as u32 * (65535 - sa) + 32767) / 65535) as u16;
+            }
+            d[3] = (sa + (da * (65535 - sa) + 32767) / 65535) as u16;
+        }
+    }
 }
