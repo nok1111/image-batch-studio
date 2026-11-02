@@ -2,6 +2,7 @@ import { Channel, invoke } from "@tauri-apps/api/core";
 import type { Settings } from "./bindings/Settings";
 import type { Job } from "./bindings/Job";
 import type { JobEvent } from "./bindings/JobEvent";
+import type { AnalyzeEvent } from "./bindings/AnalyzeEvent";
 import type { ScanResult } from "./bindings/ScanResult";
 import type { PlannedOutput } from "./bindings/PlannedOutput";
 import type { ResizePreset } from "./bindings/ResizePreset";
@@ -37,6 +38,9 @@ export type { WatermarkKind } from "./bindings/WatermarkKind";
 export type { WatermarkPosition } from "./bindings/WatermarkPosition";
 export type { WatermarkPreset } from "./bindings/WatermarkPreset";
 export type { WatermarkSpec } from "./bindings/WatermarkSpec";
+export type { AnalysisResult } from "./bindings/AnalysisResult";
+export type { AnalyzeEvent } from "./bindings/AnalyzeEvent";
+export type { FileAnalysis } from "./bindings/FileAnalysis";
 
 /** Shape of errors returned by Rust commands (see src-tauri/src/error.rs). */
 export interface LicenseStatus {
@@ -88,6 +92,16 @@ export const ipc = {
   licenseActivate: (key: string) =>
     invoke<LicenseStatus>("license_activate", { key }),
   licenseDeactivate: () => invoke<LicenseStatus>("license_deactivate"),
+  analyzeFiles: (paths: string[], onEvent: (event: AnalyzeEvent) => void) => {
+    const channel = new Channel<AnalyzeEvent>();
+    channel.onmessage = onEvent;
+    return invoke<void>("analyze_files", { paths, onEvent: channel });
+  },
+  /** Opens the save dialog in Rust; resolves to the written path or null (cancelled). */
+  exportPresets: (contents: string) =>
+    invoke<string | null>("export_presets", { contents }),
+  /** Opens the picker in Rust; resolves to file contents or null (cancelled). */
+  importPresets: () => invoke<string | null>("import_presets"),
   previewJob: (job: Job) => invoke<PlannedOutput[]>("preview_job", { job }),
   loadImage: (path: string) => invoke<ArrayBuffer>("load_image", { path }),
   listResizePresets: () => invoke<ResizePreset[]>("list_resize_presets"),

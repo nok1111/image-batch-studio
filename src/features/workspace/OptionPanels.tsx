@@ -20,6 +20,8 @@ import {
 import { cn } from "@/lib/utils";
 import { CropEditor } from "./CropEditor";
 import { WatermarkPreview } from "./WatermarkPreview";
+import { aggregateAnalysis } from "./analyze";
+import { formatBytes } from "@/lib/format";
 import type { QueueItem } from "@/stores/queue";
 import {
   COMPRESS_QUALITY,
@@ -1094,5 +1096,59 @@ export function PipelinePanel(props: PanelProps) {
       {section("watermark", <WatermarkPanel {...scopePreset("pipelineWmPresetId")} />)}
       {section("rename", <RenamerPanel {...props} />)}
     </>
+  );
+}
+
+function Stat({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="flex min-w-24 flex-col gap-0.5">
+      <span className="text-[11px] uppercase tracking-wide text-text-secondary">
+        {label}
+      </span>
+      <span className="text-sm font-medium tabular-nums text-text">{value}</span>
+    </div>
+  );
+}
+
+export function AnalyzerPanel({ items }: PanelProps) {
+  const { t } = useTranslation();
+  const files = items ?? [];
+  const stats = aggregateAnalysis(files);
+  const formats = Object.entries(stats.formats)
+    .map(([f, n]) => `${f.toUpperCase()} ${n}`)
+    .join(" · ");
+  return (
+    <div className="flex w-full flex-wrap items-center gap-x-8 gap-y-3">
+      <Stat
+        label={t("analyzer.statAnalyzed")}
+        value={`${stats.analyzed}/${files.length}`}
+      />
+      <Stat
+        label={t("analyzer.statSize")}
+        value={formatBytes(stats.totalBytes)}
+      />
+      <Stat
+        label={t("analyzer.statEst")}
+        value={stats.analyzed > 0 ? formatBytes(stats.estBytes) : "—"}
+      />
+      <Stat
+        label={t("analyzer.statSaving")}
+        value={
+          stats.savingPercent !== null
+            ? `${stats.savingPercent >= 0 ? "−" : "+"}${Math.abs(stats.savingPercent).toFixed(1)}%`
+            : "—"
+        }
+      />
+      <Stat label={t("analyzer.statAlpha")} value={String(stats.withAlpha)} />
+      <Stat
+        label={t("analyzer.statAnimated")}
+        value={String(stats.animated)}
+      />
+      <Stat label={t("analyzer.statExif")} value={String(stats.withExif)} />
+      {formats && (
+        <span className="text-xs text-text-secondary">{formats}</span>
+      )}
+      <p className="w-full text-xs text-text-secondary">{t("analyzer.hint")}</p>
+    </div>
   );
 }

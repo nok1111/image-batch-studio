@@ -290,5 +290,26 @@
     "next": "Siguiente",
     "start": "Empezar a trabajar",
     "skip": "Omitir"
+  },
+  "analyzer": {
+    "start_one": "Analizar {{count}} imagen",
+    "start_other": "Analizar {{count}} imágenes",
+    "yes": "sí",
+    "colName": "Nombre",
+    "colDims": "Medidas",
+    "colFormat": "Formato",
+    "colColor": "Color",
+    "colAlpha": "Alfa",
+    "colAnim": "Anim.",
+    "colSize": "Tamaño",
+    "colEst": "WebP est.",
+    "statAnalyzed": "Analizadas",
+    "statSize": "Tamaño total",
+    "statEst": "WebP q80 est.",
+    "statSaving": "Ahorro est.",
+    "statAlpha": "Con alfa",
+    "statAnimated": "Animadas",
+    "statExif": "Con EXIF",
+    "hint": "Solo lectura: no se escribe nada. La estimación es cada imagen recodificada como WebP con pérdida a calidad 80."
   }
 }
