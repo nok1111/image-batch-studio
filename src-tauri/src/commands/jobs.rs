@@ -183,13 +183,19 @@ pub fn start_job(
     // decodes `image_path` and job outputs enter `viewable`, so without
     // this check a crafted job could read back any local image file.
     if let Some(w) = &job.watermark {
-        if w.kind == ibs_core::watermark::WatermarkKind::Image
-            && !state
-                .store
-                .watermark_image_paths()?
-                .iter()
-                .any(|p| p == &w.image_path)
-        {
+        // Stored paths are canonical; requiring the job's path to still
+        // canonicalize to itself also rejects a picked path later replaced
+        // by a symlink (or one swapped behind a symlinked ancestor).
+        let logo_still_picked = || {
+            let p = PathBuf::from(&w.image_path);
+            p.canonicalize().ok().is_some_and(|c| c == p)
+                && state
+                    .store
+                    .watermark_image_paths()
+                    .map(|paths| paths.iter().any(|x| x == &w.image_path))
+                    .unwrap_or(false)
+        };
+        if w.kind == ibs_core::watermark::WatermarkKind::Image && !logo_still_picked() {
             return Err(CommandError {
                 code: "image",
                 message: "watermark image was not picked through the file dialog".into(),
