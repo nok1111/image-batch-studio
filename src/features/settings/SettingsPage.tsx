@@ -1,7 +1,7 @@
 import { useEffect, useState, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 import { open } from "@tauri-apps/plugin-dialog";
-import { Check, FolderOpen, Info, Lock, RotateCcw, X } from "lucide-react";
+import { Check, Download, FolderOpen, Info, Lock, RotateCcw, Upload, X } from "lucide-react";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -10,7 +10,10 @@ import { Segmented } from "@/components/ui/segmented";
 import { Slider } from "@/components/ui/slider";
 import { LOCALE_NATIVE_NAMES, SUPPORTED_LOCALES } from "@/i18n";
 import type { ConflictPolicy, ImageFormat, Language, Theme } from "@/lib/ipc";
+import { errorMessage, ipc } from "@/lib/ipc";
+import { useQueueStore } from "@/stores/queue";
 import { useSettingsStore } from "@/stores/settings";
+import { buildPresetsFile, parsePresetsFile, sameResizeSpec } from "./presets";
 
 const FORMATS: { value: ImageFormat; label: string }[] = [
   { value: "jpeg", label: "JPG" },
@@ -30,6 +33,7 @@ export function SettingsPage() {
   const { settings, appInfo, update, reset, saving, error, lastSavedAt } = useSettingsStore();
   const [quality, setQuality] = useState(settings?.defaultQuality ?? 85);
   const [concurrency, setConcurrency] = useState(settings?.concurrency ?? 0);
+  const [presetsMsg, setPresetsMsg] = useState<{ ok: boolean; text: string } | null>(null);
 
   useEffect(() => {
     if (settings) {
@@ -46,6 +50,81 @@ export function SettingsPage() {
   const pickOutputDir = async () => {
     const dir = await open({ directory: true, multiple: false, defaultPath: settings.defaultOutputDir ?? undefined });
     if (typeof dir === "string") await update({ defaultOutputDir: dir });
+  };
+
+  const exportPresets = async () => {
+    setPresetsMsg(null);
+    try {
+      const resizePresets = await ipc.listResizePresets();
+      const file = buildPresetsFile(useQueueStore.getState().options, resizePresets);
+      // The command opens the save dialog itself; null = user cancelled.
+      const path = await ipc.exportPresets(JSON.stringify(file, null, 2));
+      if (path === null) return;
+      setPresetsMsg({ ok: true, text: t("settings.presetsExported") });
+    } catch (e) {
+      setPresetsMsg({ ok: false, text: errorMessage(e) });
+    }
+  };
+
+  const importPresets = async () => {
+    setPresetsMsg(null);
+    try {
+      // The command opens the picker itself; null = user cancelled.
+      const contents = await ipc.importPresets();
+      if (contents === null) return;
+      const file = parsePresetsFile(contents);
+      const q = useQueueStore.getState();
+      // Save resize presets first, skipping entries already present (name +
+      // identical spec, e.g. re-importing the seeded presets), and remember
+      // exported id -> new id so option presetIds can be remapped.
+      const existing = await ipc.listResizePresets();
+      const idMap = new Map<number, number>();
+      let saved = 0;
+      let failed = 0;
+      for (const preset of file.resizePresets) {
+        const dupe = existing.find(
+          (p) => p.name === preset.name && sameResizeSpec(p.spec, preset.spec),
+        );
+        if (dupe) {
+          if (preset.id !== null && dupe.id !== null) idMap.set(preset.id, dupe.id);
+          continue;
+        }
+        try {
+          const inserted = await ipc.saveResizePreset({ ...preset, id: null });
+          if (preset.id !== null && inserted.id !== null) idMap.set(preset.id, inserted.id);
+          existing.push(inserted);
+          saved++;
+        } catch {
+          failed++;
+        }
+      }
+      let modules = 0;
+      for (const [mod, opts] of Object.entries(file.moduleOptions)) {
+        if (!opts) continue;
+        const patch = { ...opts };
+        if (mod === "resizer" && patch.presetId != null) {
+          // Exported preset ids refer to the source machine; remap to the id
+          // the preset got here, or clear it ("custom") when it wasn't imported.
+          patch.presetId = idMap.get(patch.presetId) ?? null;
+        }
+        q.setOptions(mod as Parameters<typeof q.setOptions>[0], patch);
+        modules++;
+      }
+      setPresetsMsg({
+        ok: failed === 0,
+        text:
+          failed === 0
+            ? t("settings.presetsImported", { modules, count: saved })
+            : t("settings.presetsImportPartial", { modules, count: saved, failed }),
+      });
+    } catch (e) {
+      setPresetsMsg({
+        ok: false,
+        text: e instanceof SyntaxError || (e instanceof Error && e.message === "unsupported presets file")
+          ? t("settings.presetsInvalid")
+          : errorMessage(e),
+      });
+    }
   };
 
   return (
@@ -173,6 +252,26 @@ export function SettingsPage() {
               ]}
             />
           </Row>
+        </Section>
+
+        <Section title={t("settings.presets")}>
+          <Row label={t("settings.presets")} hint={t("settings.presetsHint")}>
+            <div className="flex items-center gap-2">
+              <Button variant="secondary" onClick={() => void exportPresets()}>
+                <Download />
+                {t("settings.presetsExport")}
+              </Button>
+              <Button variant="secondary" onClick={() => void importPresets()}>
+                <Upload />
+                {t("settings.presetsImport")}
+              </Button>
+            </div>
+          </Row>
+          {presetsMsg && (
+            <p className={presetsMsg.ok ? "pb-3 text-xs text-success" : "pb-3 text-xs text-danger"}>
+              {presetsMsg.text}
+            </p>
+          )}
         </Section>
 
         <Section title={t("settings.license")}>
