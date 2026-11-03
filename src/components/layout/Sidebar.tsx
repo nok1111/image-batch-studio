@@ -8,7 +8,7 @@ export function Sidebar() {
   return (
     <aside className="flex w-60 shrink-0 flex-col border-r border-border bg-bg-secondary">
       <div className="flex items-center gap-3 px-5 py-5">
-        <img src="/app-icon.png" alt="" className="size-8" />
+        <img src="/imagebatch-logo.png" alt="" className="size-9" />
         <div className="leading-tight">
           <div className="text-sm font-semibold text-text">Image Batch</div>
           <div className="text-xs text-text-secondary">Studio</div>
