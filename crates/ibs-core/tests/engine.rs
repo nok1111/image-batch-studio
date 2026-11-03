@@ -68,6 +68,8 @@ fn job(inputs: &[PathBuf], out: &Path, format: ImageFormat, conflict: ConflictPo
         resize: None,
         watermark: None,
         rename: None,
+        sprite: None,
+        thumbnail: None,
     }
 }
 

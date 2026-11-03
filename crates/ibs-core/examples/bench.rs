@@ -61,6 +61,8 @@ fn main() {
         resize: None,
         watermark: None,
         rename: None,
+        sprite: None,
+        thumbnail: None,
     };
     let done = AtomicU32::new(0);
     let out_bytes = std::sync::atomic::AtomicU64::new(0);

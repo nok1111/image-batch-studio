@@ -2,6 +2,8 @@
 import type { OutputSpec } from "./OutputSpec";
 import type { RenameSpec } from "./RenameSpec";
 import type { ResizeSpec } from "./ResizeSpec";
+import type { SpriteMode } from "./SpriteMode";
+import type { ThumbnailSpec } from "./ThumbnailSpec";
 import type { TransformSpec } from "./TransformSpec";
 import type { WatermarkSpec } from "./WatermarkSpec";
 
@@ -20,4 +22,12 @@ watermark: WatermarkSpec | null,
 /**
  * Output file names; without it outputs keep the input's name.
  */
-rename: RenameSpec | null, };
+rename: RenameSpec | null, 
+/**
+ * Sprite tools (grid cut / sheet pack); replaces the usual pipeline.
+ */
+sprite: SpriteMode | null, 
+/**
+ * Social thumbnail canvas; replaces resize output.
+ */
+thumbnail: ThumbnailSpec | null, };

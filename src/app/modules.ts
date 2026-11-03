@@ -1,6 +1,8 @@
 import type { LucideIcon } from "lucide-react";
 import {
   Crop,
+  GalleryThumbnails,
+  Grid3x3,
   LayoutDashboard,
   Minimize2,
   RefreshCw,
@@ -22,7 +24,9 @@ export type ModuleId =
   | "metadata"
   | "cropRotate"
   | "analyzer"
-  | "pipeline";
+  | "pipeline"
+  | "sprites"
+  | "thumbnails";
 
 export interface ToolModule {
   id: ModuleId;
@@ -88,6 +92,20 @@ export const TOOL_MODULES: ToolModule[] = [
     id: "analyzer",
     path: "/analyzer",
     icon: ScanSearch,
+    available: true,
+    accent: "teal",
+  },
+  {
+    id: "sprites",
+    path: "/sprites",
+    icon: Grid3x3,
+    available: true,
+    accent: "accent",
+  },
+  {
+    id: "thumbnails",
+    path: "/thumbnails",
+    icon: GalleryThumbnails,
     available: true,
     accent: "teal",
   },

@@ -4,11 +4,13 @@
 //! never talks SQL; it goes through typed Tauri commands backed by [`Store`].
 
 mod error;
+mod history;
 mod migrations;
 mod presets;
 mod settings;
 
 pub use error::StoreError;
+pub use history::{HistoryRow, HistoryStats};
 pub use presets::{ResizePreset, WatermarkPreset, MAX_PRESET_NAME};
 pub use settings::{ConflictPolicy, ImageFormat, Language, Settings, Theme};
 

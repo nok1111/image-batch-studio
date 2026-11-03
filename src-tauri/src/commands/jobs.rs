@@ -1,7 +1,8 @@
 use crate::error::{CommandError, CommandResult};
 use crate::state::AppState;
 use ibs_core::{
-    AnalysisResult, AnalyzeEvent, FileResult, FileStatus, Job, JobEvent, PlannedOutput, ScanResult,
+    AnalysisResult, AnalyzeEvent, FileResult, FileStatus, Job, JobEvent, PackPreview, PackSpec,
+    PlannedOutput, ScanResult,
 };
 use std::path::PathBuf;
 use std::sync::atomic::{AtomicBool, Ordering};
@@ -49,6 +50,21 @@ pub async fn preview_job(job: Job) -> CommandResult<Vec<PlannedOutput>> {
         .map_err(Into::into)
 }
 
+/// Sheet layout the packer would produce (sprite sheet preview).
+#[tauri::command]
+pub async fn sprite_pack_preview(
+    spec: PackSpec,
+    inputs: Vec<String>,
+) -> CommandResult<PackPreview> {
+    tauri::async_runtime::spawn_blocking(move || ibs_core::preview_pack(&inputs, &spec))
+        .await
+        .map_err(|e| CommandError {
+            code: "internal",
+            message: e.to_string(),
+        })?
+        .map_err(Into::into)
+}
+
 /// Raw bytes of an image for the before/after comparison view.
 #[tauri::command]
 pub async fn load_image(
@@ -79,6 +95,42 @@ pub async fn load_image(
         message: e.message,
     })?;
     Ok(tauri::ipc::Response::new(bytes))
+}
+
+/// Generic image picker: dialog → decode check → whitelist for `load_image`.
+#[tauri::command]
+pub fn pick_image(app: AppHandle, state: State<'_, AppState>) -> CommandResult<Option<String>> {
+    let picked = app
+        .dialog()
+        .file()
+        .add_filter(
+            "Images",
+            &[
+                "png", "jpg", "jpeg", "webp", "bmp", "gif", "tif", "tiff", "avif",
+            ],
+        )
+        .blocking_pick_file();
+    let Some(file) = picked else {
+        return Ok(None);
+    };
+    let path = file.into_path().map_err(|e| CommandError {
+        code: "image",
+        message: e.to_string(),
+    })?;
+    ibs_core::codec::decode(&path).map_err(|e| CommandError {
+        code: "image",
+        message: e.message,
+    })?;
+    let path = std::fs::canonicalize(&path).unwrap_or(path);
+    state
+        .viewable
+        .lock()
+        .map_err(|_| CommandError {
+            code: "internal",
+            message: "state lock poisoned".into(),
+        })?
+        .insert(path.clone());
+    Ok(Some(path.to_string_lossy().into_owned()))
 }
 
 /// Lets the user pick a logo file for the Watermark module: opens the dialog,
@@ -168,6 +220,7 @@ pub fn start_job(
     state: State<'_, AppState>,
     job: Job,
     on_event: Channel<JobEvent>,
+    meta: Option<String>,
 ) -> CommandResult<()> {
     // Trial/licensing gate: processing is blocked when expired (ADR 0005).
     // Revalidate first so a paid license recovers once connectivity returns.
@@ -231,16 +284,23 @@ pub fn start_job(
                     forward_batched(rx, &channel, |results| JobEvent::Progress { results })
                 })
             };
+            let outputs = std::sync::Mutex::new(Vec::<String>::new());
             let outcome = ibs_core::run(&job, concurrency, &cancel, |r| {
                 if let (FileStatus::Done, Some(out)) = (&r.status, &r.output) {
                     if let Ok(mut viewable) = app.state::<AppState>().viewable.lock() {
                         viewable.insert(PathBuf::from(out));
+                    }
+                    if let Ok(mut o) = outputs.lock() {
+                        o.push(out.clone());
                     }
                 }
                 let _ = tx.send(r);
             });
             drop(tx);
             let _ = forwarder.join();
+            if let Ok(summary) = &outcome {
+                record_batch(&app, &job, meta.as_deref(), summary, outputs);
+            }
             let _ = on_event.send(match outcome {
                 Ok(summary) => JobEvent::Finished { summary },
                 Err(e) => JobEvent::Aborted {
@@ -260,6 +320,52 @@ pub fn start_job(
             message: e.to_string(),
         });
     }
+    Ok(())
+}
+
+/// Persist the finished batch in job_history for the dashboard.
+fn record_batch(
+    app: &AppHandle,
+    job: &Job,
+    meta: Option<&str>,
+    summary: &ibs_core::JobSummary,
+    outputs: std::sync::Mutex<Vec<String>>,
+) {
+    let size = |p: &str| std::fs::metadata(p).map(|m| m.len()).unwrap_or(0);
+    let bytes_in: u64 = job.inputs.iter().map(|p| size(p)).sum();
+    let outs = outputs.lock().map(|o| o.clone()).unwrap_or_default();
+    let bytes_out: u64 = outs.iter().map(|p| size(p)).sum();
+    let module = meta
+        .and_then(|m| serde_json::from_str::<serde_json::Value>(m).ok())
+        .and_then(|v| v.get("module")?.as_str().map(str::to_owned))
+        .unwrap_or_default();
+    if let Err(e) = app.state::<AppState>().store.record_batch(
+        &module,
+        summary.total as i64,
+        summary.done as i64,
+        summary.failed as i64,
+        bytes_in as i64,
+        bytes_out as i64,
+        &job.output.dir,
+        meta.unwrap_or(""),
+    ) {
+        eprintln!("history: {e}");
+    }
+}
+
+/// Dashboard data: recent batches + aggregate stats.
+#[tauri::command]
+pub fn dashboard_data(state: State<'_, AppState>) -> CommandResult<serde_json::Value> {
+    Ok(serde_json::json!({
+        "batches": state.store.recent_batches(20)?,
+        "stats": state.store.batch_stats()?,
+    }))
+}
+
+/// Removes one row from job_history.
+#[tauri::command]
+pub fn delete_batch(state: State<'_, AppState>, id: i64) -> CommandResult<()> {
+    state.store.delete_batch(id)?;
     Ok(())
 }
 

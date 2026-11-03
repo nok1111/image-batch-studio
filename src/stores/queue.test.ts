@@ -24,6 +24,8 @@ const job = {
       resize: null,
   watermark: null,
   rename: null,
+  sprite: null,
+      thumbnail: null,
 } as const;
 
 describe("queue store", () => {

@@ -11,7 +11,7 @@ use ts_rs::TS;
 
 /// Bundled fallback font (DejaVu Sans, Bitstream Vera license — see
 /// `fonts/DejaVuSans-LICENSE.txt`).
-static FONT_BYTES: &[u8] = include_bytes!("../fonts/DejaVuSans.ttf");
+pub(crate) static FONT_BYTES: &[u8] = include_bytes!("../fonts/DejaVuSans.ttf");
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, TS)]
 #[serde(rename_all = "camelCase")]

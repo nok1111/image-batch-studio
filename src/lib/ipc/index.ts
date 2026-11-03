@@ -5,6 +5,8 @@ import type { JobEvent } from "./bindings/JobEvent";
 import type { AnalyzeEvent } from "./bindings/AnalyzeEvent";
 import type { ScanResult } from "./bindings/ScanResult";
 import type { PlannedOutput } from "./bindings/PlannedOutput";
+import type { PackPreview } from "./bindings/PackPreview";
+import type { PackSpec } from "./bindings/PackSpec";
 import type { ResizePreset } from "./bindings/ResizePreset";
 import type { WatermarkPreset } from "./bindings/WatermarkPreset";
 
@@ -31,6 +33,24 @@ export type { OutputMode } from "./bindings/OutputMode";
 export type { PlannedAction } from "./bindings/PlannedAction";
 export type { PlannedOutput } from "./bindings/PlannedOutput";
 export type { RenameSpec } from "./bindings/RenameSpec";
+export type { SpriteMode } from "./bindings/SpriteMode";
+export type { CutSpec } from "./bindings/CutSpec";
+export type { CutSizing } from "./bindings/CutSizing";
+export type { CutEdge } from "./bindings/CutEdge";
+export type { TileNaming } from "./bindings/TileNaming";
+export type { PackSpec } from "./bindings/PackSpec";
+export type { PackPreview } from "./bindings/PackPreview";
+export type { PackRect } from "./bindings/PackRect";
+export type { PackSheetPreview } from "./bindings/PackSheetPreview";
+export type { PackCell } from "./bindings/PackCell";
+export type { PackOrder } from "./bindings/PackOrder";
+export type { ThumbnailSpec } from "./bindings/ThumbnailSpec";
+export type { ThumbBg } from "./bindings/ThumbBg";
+export type { ThumbFit } from "./bindings/ThumbFit";
+export type { ThumbText } from "./bindings/ThumbText";
+export type { ThumbImage } from "./bindings/ThumbImage";
+export type { ThumbLayer } from "./bindings/ThumbLayer";
+export type { ThumbAdjust } from "./bindings/ThumbAdjust";
 export type { ResizeMode } from "./bindings/ResizeMode";
 export type { ResizePreset } from "./bindings/ResizePreset";
 export type { ResizeSpec } from "./bindings/ResizeSpec";
@@ -75,6 +95,29 @@ export function errorMessage(e: unknown): string {
   return String(e);
 }
 
+export interface BatchRow {
+  id: number;
+  at: number;
+  module: string;
+  files: number;
+  ok: number;
+  failed: number;
+  bytesIn: number;
+  bytesOut: number;
+  outputDir: string;
+  meta: string;
+}
+
+export interface BatchStats {
+  batches: number;
+  files: number;
+  ok: number;
+  failed: number;
+  bytesIn: number;
+  bytesOut: number;
+  topModule: string | null;
+}
+
 export const ipc = {
   appInfo: () => invoke<AppInfo>("app_info"),
   getSettings: () => invoke<Settings>("get_settings"),
@@ -82,10 +125,14 @@ export const ipc = {
   resetSettings: () => invoke<Settings>("reset_settings"),
   openOutputDir: () => invoke<void>("open_output_dir"),
   scanInputs: (paths: string[]) => invoke<ScanResult>("scan_inputs", { paths }),
-  startJob: (job: Job, onEvent: (event: JobEvent) => void) => {
+  startJob: (
+    job: Job,
+    onEvent: (event: JobEvent) => void,
+    meta?: string,
+  ) => {
     const channel = new Channel<JobEvent>();
     channel.onmessage = onEvent;
-    return invoke<void>("start_job", { job, onEvent: channel });
+    return invoke<void>("start_job", { job, onEvent: channel, meta: meta ?? null });
   },
   cancelJob: () => invoke<boolean>("cancel_job"),
   licenseStatus: () => invoke<LicenseStatus>("license_status"),
@@ -103,6 +150,12 @@ export const ipc = {
   /** Opens the picker in Rust; resolves to file contents or null (cancelled). */
   importPresets: () => invoke<string | null>("import_presets"),
   previewJob: (job: Job) => invoke<PlannedOutput[]>("preview_job", { job }),
+  previewSpritePack: (spec: PackSpec, inputs: string[]) =>
+    invoke<PackPreview>("sprite_pack_preview", { spec, inputs }),
+  pickImage: () => invoke<string | null>("pick_image"),
+  dashboardData: () =>
+    invoke<{ batches: BatchRow[]; stats: BatchStats }>("dashboard_data"),
+  deleteBatch: (id: number) => invoke<void>("delete_batch", { id }),
   loadImage: (path: string) => invoke<ArrayBuffer>("load_image", { path }),
   listResizePresets: () => invoke<ResizePreset[]>("list_resize_presets"),
   saveResizePreset: (preset: ResizePreset) => invoke<ResizePreset>("save_resize_preset", { preset }),

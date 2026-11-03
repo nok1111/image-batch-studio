@@ -34,6 +34,8 @@ import {
   PipelinePanel,
   RenamerPanel,
   ResizerPanel,
+  SpritesPanel,
+  ThumbnailsPanel,
 } from "./OptionPanels";
 import { AnalysisTable } from "./AnalysisTable";
 
@@ -62,6 +64,8 @@ const PANELS = {
   watermark: WatermarkPanel,
   pipeline: PipelinePanel,
   analyzer: AnalyzerPanel,
+  sprites: SpritesPanel,
+  thumbnails: ThumbnailsPanel,
 } as const;
 
 export type WorkspaceModule = keyof typeof PANELS;
@@ -174,7 +178,15 @@ export function Workspace({ module }: { module: ModuleId }) {
     }
     const dir = outputDir ?? (await chooseOutput());
     if (!dir) return;
-    await q.start(buildJob(module, o, settings, dir, []));
+    await q.start(
+      buildJob(module, o, settings, dir, []),
+      JSON.stringify({
+        module,
+        options: q.options[module],
+        inputs: q.items.map((i) => i.path),
+        output: dir,
+      }),
+    );
   };
 
   const busy = q.running || q.scanning;
@@ -239,12 +251,12 @@ export function Workspace({ module }: { module: ModuleId }) {
 
       <Card
         className={cn(
-          "relative min-h-64 flex-1 overflow-hidden p-0",
+          "relative overflow-hidden p-0",
           dragging && "ring-2 ring-accent",
         )}
       >
         {q.items.length === 0 ? (
-          <div className="flex h-full flex-col items-center justify-center gap-2 p-8 text-center">
+          <div className="flex h-44 flex-col items-center justify-center gap-2 p-8 text-center">
             <Upload className="size-8 text-text-secondary/60" />
             <p className="text-sm font-medium text-text">
               {t("workspace.dropTitle")}
@@ -253,25 +265,32 @@ export function Workspace({ module }: { module: ModuleId }) {
               {t("workspace.dropHint")}
             </p>
           </div>
-        ) : isAnalyzer ? (
-          <AnalysisTable
-            items={q.items}
-            running={q.running}
-            onRemove={q.removeItem}
-          />
         ) : (
-          <FileList
-            items={q.items}
-            running={q.running}
-            onRemove={q.removeItem}
-            previews={wantsRename ? (previews ?? []) : undefined}
-            renamed={q.lastMode === "copyOriginal"}
-            onCompare={
-              module === "renamer" || isAnalyzer
-                ? undefined
-                : (i) => setCompare(q.items[i]?.path ?? null)
-            }
-          />
+          <div
+            className="overflow-y-auto"
+            style={{ height: Math.min(Math.max(q.items.length * 44 + 8, 120), 336) }}
+          >
+            {isAnalyzer ? (
+              <AnalysisTable
+                items={q.items}
+                running={q.running}
+                onRemove={q.removeItem}
+              />
+            ) : (
+              <FileList
+                items={q.items}
+                running={q.running}
+                onRemove={q.removeItem}
+                previews={wantsRename ? (previews ?? []) : undefined}
+                renamed={q.lastMode === "copyOriginal"}
+                onCompare={
+                  module === "renamer" || isAnalyzer
+                    ? undefined
+                    : (i) => setCompare(q.items[i]?.path ?? null)
+                }
+              />
+            )}
+          </div>
         )}
         {dragging && (
           <div className="pointer-events-none absolute inset-0 flex items-center justify-center bg-accent/10 text-sm font-medium text-accent">
@@ -281,7 +300,14 @@ export function Workspace({ module }: { module: ModuleId }) {
       </Card>
 
       <Card className="flex flex-wrap items-end gap-x-6 gap-y-4 px-5 py-4">
-        <Panel module={module} o={o} set={set} disabled={q.running} items={q.items} />
+        <Panel
+          module={module}
+          o={o}
+          set={set}
+          disabled={q.running}
+          items={q.items}
+          previews={wantsRename ? previews : undefined}
+        />
       </Card>
 
       {expired && (

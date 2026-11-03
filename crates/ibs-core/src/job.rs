@@ -1,3 +1,5 @@
+use crate::sprite::SpriteMode;
+use crate::thumbnail::ThumbnailSpec;
 use crate::transform::TransformSpec;
 use crate::watermark::WatermarkSpec;
 use crate::{ConflictPolicy, FileError, ImageFormat, RenameSpec, ResizeSpec};
@@ -60,6 +62,10 @@ pub struct Job {
     pub watermark: Option<WatermarkSpec>,
     /// Output file names; without it outputs keep the input's name.
     pub rename: Option<RenameSpec>,
+    /// Sprite tools (grid cut / sheet pack); replaces the usual pipeline.
+    pub sprite: Option<SpriteMode>,
+    /// Social thumbnail canvas; replaces resize output.
+    pub thumbnail: Option<ThumbnailSpec>,
 }
 
 /// Non-fatal notice attached to a successful result.

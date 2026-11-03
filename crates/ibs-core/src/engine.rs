@@ -109,6 +109,12 @@ fn validate(job: &Job) -> Result<(), JobError> {
     if let Some(r) = &job.rename {
         r.validate().map_err(JobError::InvalidOptions)?;
     }
+    if let Some(s) = &job.sprite {
+        s.validate().map_err(JobError::InvalidOptions)?;
+    }
+    if let Some(t) = &job.thumbnail {
+        t.validate().map_err(JobError::InvalidOptions)?;
+    }
     if !Path::new(&o.dir).is_absolute() {
         return Err(JobError::OutputDirNotAbsolute);
     }
@@ -257,6 +263,10 @@ where
     let started = Instant::now();
     let dir = prepare(job)?;
     let inputs: Vec<PathBuf> = job.inputs.iter().map(PathBuf::from).collect();
+    if let Some(s) = &job.sprite {
+        let _ = started;
+        return crate::sprite::execute(job, s, &dir, &inputs, cancel, on_result);
+    }
     let plans = plan_all(job, &dir, &inputs);
     let threads = match concurrency {
         0 => std::thread::available_parallelism().map_or(1, |n| n.get()),
@@ -464,6 +474,9 @@ fn write_one(
             };
             if let Some(r) = &job.resize {
                 img = r.apply(&img);
+            }
+            if let Some(t) = &job.thumbnail {
+                img = crate::thumbnail::apply(&img, t)?;
             }
             if let Some(w) = watermark {
                 watermark::apply(job.watermark.as_ref().unwrap(), w, &mut img);

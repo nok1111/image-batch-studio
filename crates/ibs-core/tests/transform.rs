@@ -28,6 +28,8 @@ fn job(dir: &std::path::Path, inputs: Vec<PathBuf>, transform: Option<TransformS
         resize: None,
         watermark: None,
         rename: None,
+        sprite: None,
+        thumbnail: None,
     }
 }
 

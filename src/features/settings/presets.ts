@@ -36,6 +36,8 @@ const OPTION_KEYS: Record<
   transform: "object",
   presetId: "number|null",
   rename: "object",
+  sprite: "object",
+  thumbnail: "object",
   watermark: "object",
   pipelineUse: "object",
   pipelineResizePresetId: "number|null",

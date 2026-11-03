@@ -45,6 +45,18 @@ pub struct Decoded {
     pub exif: Option<Vec<u8>>,
 }
 
+/// Reads just the header dimensions (no pixel decode). Used by previews.
+pub fn dimensions(path: &Path) -> Result<(u32, u32), FileError> {
+    let mut reader = ImageReader::open(path)
+        .map_err(FileError::io)?
+        .with_guessed_format()
+        .map_err(|e| FileError::new(FileErrorCode::Unsupported, e.to_string()))?;
+    reader.limits(limits());
+    reader
+        .into_dimensions()
+        .map_err(|e| FileError::new(FileErrorCode::Decode, e.to_string()))
+}
+
 /// Decodes by content (not extension), with dimension and memory limits.
 pub fn decode(path: &Path) -> Result<Decoded, FileError> {
     let mut reader = ImageReader::open(path)

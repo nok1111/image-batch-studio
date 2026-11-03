@@ -49,6 +49,8 @@ fn job(inputs: Vec<PathBuf>, out: &Path, watermark: Option<WatermarkSpec>) -> Jo
         resize: None,
         watermark,
         rename: None,
+        sprite: None,
+        thumbnail: None,
     }
 }
 

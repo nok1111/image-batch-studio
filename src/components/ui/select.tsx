@@ -1,10 +1,13 @@
+import type { CSSProperties } from "react";
 import * as SelectPrimitive from "@radix-ui/react-select";
-import { Check, ChevronDown } from "lucide-react";
+import { Check, ChevronDown, ChevronUp } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 export interface SelectOption<T extends string> {
   value: T;
   label: string;
+  /** Optional per-option inline style (e.g. preview the option's own font). */
+  style?: CSSProperties;
 }
 
 interface SelectProps<T extends string> {
@@ -45,9 +48,12 @@ export function Select<T extends string>({
         <SelectPrimitive.Content
           position="popper"
           sideOffset={6}
-          className="z-50 min-w-[var(--radix-select-trigger-width)] overflow-hidden rounded-lg border border-border bg-card p-1 shadow-card"
+          className="z-50 max-h-[var(--radix-select-content-available-height)] min-w-[var(--radix-select-trigger-width)] overflow-hidden rounded-lg border border-border bg-card p-1 shadow-card"
         >
-          <SelectPrimitive.Viewport>
+          <SelectPrimitive.ScrollUpButton className="flex h-6 cursor-default items-center justify-center text-text-secondary">
+            <ChevronUp className="size-4" />
+          </SelectPrimitive.ScrollUpButton>
+          <SelectPrimitive.Viewport className="max-h-[min(60vh,var(--radix-select-content-available-height))] overflow-y-auto">
             {options.map((o) => (
               <SelectPrimitive.Item
                 key={o.value}
@@ -57,10 +63,15 @@ export function Select<T extends string>({
                 <SelectPrimitive.ItemIndicator className="absolute left-2.5">
                   <Check className="size-4 text-accent" />
                 </SelectPrimitive.ItemIndicator>
-                <SelectPrimitive.ItemText>{o.label}</SelectPrimitive.ItemText>
+                <SelectPrimitive.ItemText>
+                  <span style={o.style}>{o.label}</span>
+                </SelectPrimitive.ItemText>
               </SelectPrimitive.Item>
             ))}
           </SelectPrimitive.Viewport>
+          <SelectPrimitive.ScrollDownButton className="flex h-6 cursor-default items-center justify-center text-text-secondary">
+            <ChevronDown className="size-4" />
+          </SelectPrimitive.ScrollDownButton>
         </SelectPrimitive.Content>
       </SelectPrimitive.Portal>
     </SelectPrimitive.Root>

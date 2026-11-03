@@ -136,6 +136,8 @@ fn metadata_strip_job_keeps_all_gif_frames() {
         resize: None,
         watermark: None,
         rename: None,
+        sprite: None,
+        thumbnail: None,
     };
     let results = Mutex::new(Vec::new());
     run(&job, 2, &AtomicBool::new(false), |r: FileResult| {
@@ -175,6 +177,8 @@ fn gif_strip_with_target_size_warns_instead_of_silently_ignoring() {
         resize: None,
         watermark: None,
         rename: None,
+        sprite: None,
+        thumbnail: None,
     };
     let results = Mutex::new(Vec::new());
     run(&job, 2, &AtomicBool::new(false), |r: FileResult| {
@@ -211,6 +215,8 @@ fn converting_an_animated_gif_still_uses_first_frame() {
         resize: None,
         watermark: None,
         rename: None,
+        sprite: None,
+        thumbnail: None,
     };
     let results = Mutex::new(Vec::new());
     run(&job, 2, &AtomicBool::new(false), |r: FileResult| {

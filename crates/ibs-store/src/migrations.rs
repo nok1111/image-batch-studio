@@ -33,6 +33,18 @@ const MIGRATIONS: &[&str] = &[
     r#"CREATE TABLE watermark_images (
         path TEXT PRIMARY KEY NOT NULL
     );"#,
+    r#"CREATE TABLE job_history (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        at INTEGER NOT NULL,
+        module TEXT NOT NULL DEFAULT '',
+        files INTEGER NOT NULL DEFAULT 0,
+        ok INTEGER NOT NULL DEFAULT 0,
+        failed INTEGER NOT NULL DEFAULT 0,
+        bytes_in INTEGER NOT NULL DEFAULT 0,
+        bytes_out INTEGER NOT NULL DEFAULT 0,
+        output_dir TEXT NOT NULL DEFAULT '',
+        meta TEXT NOT NULL DEFAULT ''
+    )"#,
 ];
 
 pub const LATEST: usize = MIGRATIONS.len();

@@ -13,7 +13,7 @@ export function Segmented<T extends string>({ value, options, onValueChange, ...
     <div
       role="radiogroup"
       aria-label={rest["aria-label"]}
-      className="inline-flex rounded-lg border border-border bg-bg-secondary p-0.5"
+      className="inline-flex flex-wrap rounded-lg border border-border bg-bg-secondary p-0.5"
     >
       {options.map((o) => (
         <button

@@ -59,7 +59,7 @@ interface QueueState extends QueueStats {
   addPaths: (paths: string[]) => Promise<void>;
   removeItem: (index: number) => void;
   clear: () => void;
-  start: (job: Omit<Job, "inputs">) => Promise<void>;
+  start: (job: Omit<Job, "inputs">, meta?: string) => Promise<void>;
   /** Read-only scan for the Analyzer module: fills each item's `analysis`. */
   analyze: () => Promise<void>;
   cancel: () => Promise<void>;
@@ -124,7 +124,7 @@ export const useQueueStore = create<QueueState>((set, get) => ({
     set({ ...idle, items: [], total: 0, bytesTotal: 0, scanNotice: null, error: null });
   },
 
-  start: async (job) => {
+  start: async (job, meta?: string) => {
     const { items, running } = get();
     if (running || items.length === 0) return;
     set({
@@ -136,7 +136,7 @@ export const useQueueStore = create<QueueState>((set, get) => ({
       items: items.map((i) => ({ ...i, status: "pending", output: null, outputSize: null, error: null, warnings: [] })),
     });
     try {
-      await ipc.startJob({ ...job, inputs: items.map((i) => i.path) }, (ev) => get().applyEvent(ev));
+      await ipc.startJob({ ...job, inputs: items.map((i) => i.path) }, (ev) => get().applyEvent(ev), meta);
       set({ lastOutputDir: job.output.dir });
     } catch (e) {
       set({ running: false, startedAt: null, error: errorMessage(e) });

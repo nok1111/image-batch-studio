@@ -23,6 +23,8 @@ describe("Sidebar", () => {
       "Metadata Cleaner",
       "Crop & Rotate",
       "Image Analyzer",
+      "Sprites",
+      "Thumbnails",
       "Pipeline",
       "Settings",
     ]);
