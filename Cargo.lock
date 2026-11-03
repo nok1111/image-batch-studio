@@ -2088,9 +2088,10 @@ dependencies = [
 
 [[package]]
 name = "ibs-core"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "ab_glyph",
+ "dunce",
  "image",
  "imageproc",
  "rayon",
@@ -2107,7 +2108,7 @@ dependencies = [
 
 [[package]]
 name = "ibs-store"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "ibs-core",
  "rusqlite",
@@ -2264,7 +2265,7 @@ dependencies = [
 
 [[package]]
 name = "image-batch-studio"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "base64 0.22.1",
  "ed25519-dalek",

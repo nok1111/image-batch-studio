@@ -126,7 +126,7 @@ pub fn prepare(job: &Job) -> Result<PathBuf, JobError> {
     validate(job)?;
     let dir = Path::new(&job.output.dir);
     std::fs::create_dir_all(dir).map_err(JobError::OutputDir)?;
-    std::fs::canonicalize(dir).map_err(JobError::OutputDir)
+    dunce::canonicalize(dir).map_err(JobError::OutputDir)
 }
 
 /// Encoded format for `input`, or `None` for byte copies.
@@ -214,7 +214,7 @@ pub struct PlannedOutput {
 pub fn preview(job: &Job) -> Result<Vec<PlannedOutput>, JobError> {
     validate(job)?;
     let dir = Path::new(&job.output.dir);
-    let dir = std::fs::canonicalize(dir).unwrap_or_else(|_| dir.to_path_buf());
+    let dir = dunce::canonicalize(dir).unwrap_or_else(|_| dir.to_path_buf());
     let inputs: Vec<PathBuf> = job.inputs.iter().map(PathBuf::from).collect();
     let plans = plan_all(job, &dir, &inputs);
     Ok(plans

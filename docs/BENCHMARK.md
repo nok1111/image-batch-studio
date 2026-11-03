@@ -14,7 +14,7 @@ The run measures the engine only (decode → encode lossy WebP → write temp �
 | Machine | Images | Result |
 |---|---|---|
 | Devin Linux VM, 8 vCPU | 100 × 12 MP JPEG → WebP q80 | 24.9 s · 4.0 img/s · 48 MP/s · 197 → 71 MB |
-| Windows reference machine | 1000 × 12 MP JPEG → WebP q80 | _pending: run the command above on the target PC_ |
+| Windows 10 Pro, Ryzen 7 5700X (16 threads) | 1000 × 12 MP JPEG → WebP q80 | 109.0 s · 9.18 img/s · 110.1 MP/s · 1970 → 721 MB |
 
 Notes:
 - Verification decodes every output, so it costs roughly one extra decode per file.

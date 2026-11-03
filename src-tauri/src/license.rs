@@ -194,6 +194,7 @@ enum Marker<'a> {
     Store(&'a ibs_store::Store),
     File(PathBuf),
     #[cfg(target_os = "windows")]
+    #[cfg_attr(test, allow(dead_code))]
     Registry,
 }
 
@@ -265,7 +266,7 @@ impl<'a> License<'a> {
             markers: vec![
                 Marker::Store(store),
                 Marker::File(data_dir.join("trial.stamp")),
-                #[cfg(target_os = "windows")]
+                #[cfg(all(target_os = "windows", not(test)))]
                 Marker::Registry,
             ],
             seen_files,
@@ -767,13 +768,15 @@ mod tests {
         let home = temp_dir();
         let s1: &'static Store = Box::leak(Box::new(Store::open(&dir.join("db.sqlite3")).unwrap()));
         License::load_with_home(s1, &dir, Some(home.clone())).status();
-        // Wipe the whole app data dir: the home marker still says "seen".
-        let _ = std::fs::remove_dir_all(&dir);
-        std::fs::create_dir_all(&dir).unwrap();
-        let s2: &'static Store = Box::leak(Box::new(Store::open(&dir.join("db.sqlite3")).unwrap()));
-        let l2 = License::load_with_home(s2, &dir, Some(home.clone()));
+        // Fresh data dir == wiped app data (Windows can't unlink the sqlite
+        // s1 still holds open): the home marker still says "seen".
+        let dir2 = temp_dir();
+        let s2: &'static Store =
+            Box::leak(Box::new(Store::open(&dir2.join("db.sqlite3")).unwrap()));
+        let l2 = License::load_with_home(s2, &dir2, Some(home.clone()));
         assert_eq!(l2.status().state, "expired");
         let _ = std::fs::remove_dir_all(&dir);
+        let _ = std::fs::remove_dir_all(&dir2);
         let _ = std::fs::remove_dir_all(&home);
     }
 

@@ -31,4 +31,4 @@
 - [x] Licensing + 3-day trial (ADR 0005)  - [ ] Signed installer  - [x] Onboarding  - [ ] Docs / landing
 
 ## Phase 6 — Testing & release
-- [ ] Win10 / Win11  - [ ] Large batches  - [ ] Low memory  - [ ] Corrupted files  - [ ] Offline  - [ ] Install / uninstall
+- [x] Win10 (full test suite + benchmark on Win10 Pro, Ryzen 7 5700X — two Windows-only bugs fixed: `\\?\` verbatim paths in job outputs, registry marker leaking into license tests)  - [ ] Win11  - [x] Large batches (1000×12 MP bench: 109 s, 9.18 img/s)  - [ ] Low memory  - [x] Corrupted files (engine tests: bad files fail individually, batch completes)  - [ ] Offline  - [ ] Install / uninstall

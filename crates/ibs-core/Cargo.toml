@@ -20,6 +20,7 @@ imageproc = "0.25"
 ab_glyph = "0.2"
 zenavif = "0.1.6"
 zenpixels = "0.2"
+dunce = "1.0.5"
 
 [dev-dependencies]
 serde_json.workspace = true
